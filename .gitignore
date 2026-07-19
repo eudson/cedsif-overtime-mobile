@@ -16,6 +16,8 @@ docs/superpowers/
 .vscode/
 
 # Platform-generated files
+*.freezed.dart
+*.g.dart
 **/Flutter/ephemeral/
 **/GeneratedPluginRegistrant.*
 **/generated_plugin_registrant.cc

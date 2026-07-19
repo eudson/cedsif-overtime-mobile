@@ -10,9 +10,8 @@
     "cancel": "Cancelar"
   },
   "errors": {
-    "generic": "Algo salió mal. Inténtalo de nuevo."
-  },
-  "network": {
+    "generic": "Algo salió mal. Inténtalo de nuevo.",
+    "network": "Comprueba tu conexión e inténtalo de nuevo.",
     "sessionExpired": "Tu sesión ha caducado. Inicia sesión de nuevo."
   }
 }

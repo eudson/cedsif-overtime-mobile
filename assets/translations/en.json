@@ -10,9 +10,8 @@
     "cancel": "Cancel"
   },
   "errors": {
-    "generic": "Something went wrong. Please try again."
-  },
-  "network": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "Check your connection and try again.",
     "sessionExpired": "Your session has expired. Please sign in again."
   }
 }
