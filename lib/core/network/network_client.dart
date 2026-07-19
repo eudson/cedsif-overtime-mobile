@@ -15,6 +15,8 @@ import 'package:cedsif_overtime_mobile/core/network/token_refresh_interceptor.da
 import 'package:cedsif_overtime_mobile/core/storage/secure_storage.dart';
 import 'package:cedsif_overtime_mobile/core/utils/logger.dart';
 
+typedef NetworkDioFactory = Dio Function(BaseOptions options);
+
 void _logNetworkMessage(Object message) {
   final normalizedMessage = message.toString().replaceAll(
     RegExp('%40', caseSensitive: false),
@@ -48,9 +50,10 @@ class AuthHeaderInterceptor extends Interceptor {
 }
 
 class NetworkClient {
-  const NetworkClient._(this.dio);
+  const NetworkClient._(this.dio, this._refreshDio);
 
   final Dio dio;
+  final Dio _refreshDio;
 
   factory NetworkClient.create({
     required SecureStorage secureStorage,
@@ -60,6 +63,7 @@ class NetworkClient {
     String baseUrl = EnvironmentConfig.apiBaseUrl,
     Duration? timeout,
     bool includeDebugLogger = kDebugMode,
+    NetworkDioFactory dioFactory = Dio.new,
   }) {
     final resolvedTimeout = timeout ?? EnvironmentConfig.apiTimeout;
     final options = BaseOptions(
@@ -68,8 +72,8 @@ class NetworkClient {
       receiveTimeout: resolvedTimeout,
       sendTimeout: resolvedTimeout,
     );
-    final dio = Dio(options);
-    final refreshDio = Dio(options);
+    final dio = dioFactory(options);
+    final refreshDio = dioFactory(options);
     dio.interceptors.clear(keepImplyContentTypeInterceptor: false);
     dio.interceptors.addAll(<Interceptor>[
       AuthHeaderInterceptor(secureStorage, apiBaseUrl: baseUrl),
@@ -102,6 +106,11 @@ class NetworkClient {
           logPrint: _logNetworkMessage,
         ),
     ]);
-    return NetworkClient._(dio);
+    return NetworkClient._(dio, refreshDio);
+  }
+
+  void close({bool force = false}) {
+    dio.close(force: force);
+    _refreshDio.close(force: force);
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
@@ -19,6 +21,24 @@ class _MockNetworkMonitor extends Mock implements NetworkMonitor {}
 class _MockSecureStorage extends Mock implements SecureStorage {}
 
 class _RequestHandler extends Mock implements RequestInterceptorHandler {}
+
+class _RecordingAdapter implements HttpClientAdapter {
+  bool isClosed = false;
+  bool? force;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) => throw UnsupportedError('No requests expected');
+
+  @override
+  void close({bool force = false}) {
+    isClosed = true;
+    this.force = force;
+  }
+}
 
 class _RecordingSink implements AppLogSink {
   final List<Object?> messages = <Object?>[];
@@ -158,5 +178,31 @@ void main() {
     expect(received, isNot(contains('person%40example.com')));
     expect(received, isNot(contains('raw-token-value')));
     expect(received, contains('[REDACTED]'));
+  });
+
+  test('close owns and closes primary and refresh transports', () {
+    final adapters = <_RecordingAdapter>[];
+    Dio createDio(BaseOptions options) {
+      final adapter = _RecordingAdapter();
+      adapters.add(adapter);
+      return Dio(options)..httpClientAdapter = adapter;
+    }
+
+    final client = NetworkClient.create(
+      secureStorage: _MockSecureStorage(),
+      authEventBus: AuthEventBus(),
+      networkMonitor: _MockNetworkMonitor(),
+      cacheBox: _MockBox(),
+      includeDebugLogger: false,
+      baseUrl: 'https://example.test',
+      timeout: const Duration(seconds: 5),
+      dioFactory: createDio,
+    );
+
+    client.close(force: true);
+
+    expect(adapters, hasLength(2));
+    expect(adapters.every((adapter) => adapter.isClosed), isTrue);
+    expect(adapters.every((adapter) => adapter.force == true), isTrue);
   });
 }

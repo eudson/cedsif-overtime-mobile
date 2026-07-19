@@ -42,7 +42,7 @@ Future<bool> processGenericBackgroundQueue() async {
       handler: DioPendingRequestHandler(networkClient.dio),
     ).processPendingRequests();
   } finally {
-    networkClient?.dio.close(force: true);
+    networkClient?.close(force: true);
     await authEventBus.dispose();
     await Future.wait(<Future<void>>[
       database.cacheBox.close(),
