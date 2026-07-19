@@ -8,10 +8,11 @@ abstract final class AppConstants {
 
   static const int cacheVersion = 1;
   static const int maxNetworkRetries = 1;
+  static const Duration defaultApiTimeout = Duration(seconds: 30);
   static const Duration splashDuration = Duration(milliseconds: 500);
 }
 
 abstract final class RouteConstants {
-  static const String splash = '/';
+  static const String splash = '/splash';
   static const String home = '/home';
 }

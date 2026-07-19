@@ -65,17 +65,17 @@ void main() {
 
       expect(
         ErrorHandler.handle(unauthorized),
-        const AuthFailure('Authentication failed', code: '401'),
+        const AuthFailure('errors.sessionExpired', code: '401'),
       );
       expect(
         ErrorHandler.handle(badRequest),
-        const ValidationFailure('Request validation failed', code: '422'),
+        const ValidationFailure('errors.generic', code: '422'),
       );
     });
 
     test('maps unknown errors to a safe server failure', () {
       final result = ErrorHandler.handle(StateError('sensitive details'));
-      expect(result, const ServerFailure('An unexpected error occurred'));
+      expect(result, const ServerFailure('errors.generic'));
       expect(result.message, isNot(contains('sensitive')));
     });
   });

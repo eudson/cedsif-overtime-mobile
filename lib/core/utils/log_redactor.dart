@@ -10,13 +10,25 @@ abstract final class LogRedactor {
     caseSensitive: false,
   );
   static final RegExp _sensitivePairPattern = RegExp(
-    r'''\b(token|password|secret(?:[_-]?key)?)\s*[:=]\s*(?:["'][^"']*["']|[^\s,;}]+)''',
+    r'''\b(authorization|api[_-]?key|token|password|secret(?:[_-]?key)?|cookie|session|phone|address|(?:first|last|full)[_-]?name|name)\s*[:=]\s*(?:["'][^"']*["']|[^\s,;}]+)''',
     caseSensitive: false,
   );
-  static final RegExp _sensitiveKeyPattern = RegExp(
-    r'(token|password|secret(?:[_-]?key)?)',
-    caseSensitive: false,
-  );
+  static const Set<String> _sensitiveKeys = {
+    'authorization',
+    'apikey',
+    'token',
+    'password',
+    'secret',
+    'secretkey',
+    'cookie',
+    'session',
+    'phone',
+    'address',
+    'name',
+    'firstname',
+    'lastname',
+    'fullname',
+  };
 
   static String redact(String value) => value
       .replaceAllMapped(_bearerPattern, (_) => 'Bearer $redactedValue')
@@ -41,6 +53,9 @@ abstract final class LogRedactor {
     };
   }
 
-  static bool _isSensitiveKey(Object? key) =>
-      key is String && _sensitiveKeyPattern.hasMatch(key);
+  static bool _isSensitiveKey(Object? key) {
+    if (key is! String) return false;
+    final normalized = key.toLowerCase().replaceAll(RegExp('[^a-z]'), '');
+    return _sensitiveKeys.contains(normalized);
+  }
 }

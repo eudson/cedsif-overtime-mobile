@@ -47,6 +47,33 @@ void main() {
     expect(await storage.readRefreshToken(), 'refresh-token');
   });
 
+  test('writes an access and refresh token as one operation', () async {
+    when(
+      () => delegate.write(
+        key: any(named: 'key'),
+        value: any(named: 'value'),
+      ),
+    ).thenAnswer((_) async {});
+
+    await storage.writeTokens(
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+    );
+
+    verify(
+      () => delegate.write(
+        key: SecureStorage.accessTokenKey,
+        value: 'access-token',
+      ),
+    ).called(1);
+    verify(
+      () => delegate.write(
+        key: SecureStorage.refreshTokenKey,
+        value: 'refresh-token',
+      ),
+    ).called(1);
+  });
+
   test('clearTokens deletes only the two token entries', () async {
     when(
       () => delegate.delete(key: any(named: 'key')),

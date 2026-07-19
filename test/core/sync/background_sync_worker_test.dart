@@ -7,6 +7,10 @@ import 'package:cedsif_overtime_mobile/core/sync/sync_constants.dart';
 
 class _MockWorkmanager extends Mock implements Workmanager {}
 
+class _MockGenericSyncOperation extends Mock {
+  Future<bool> call();
+}
+
 void main() {
   late _MockWorkmanager workmanager;
   late BackgroundSyncWorker worker;
@@ -52,5 +56,39 @@ void main() {
             ).captured.single
             as Constraints;
     expect(captured.networkType, NetworkType.connected);
+  });
+
+  test('background task delegates known work to the sync operation', () async {
+    final operation = _MockGenericSyncOperation();
+    when(operation.call).thenAnswer((_) async => true);
+
+    final result = await executeBackgroundTask(
+      SyncConstants.taskName,
+      operation.call,
+    );
+
+    expect(result, isTrue);
+    verify(operation.call).called(1);
+  });
+
+  test('background task safely reports sync operation failure', () async {
+    final operation = _MockGenericSyncOperation();
+    when(operation.call).thenThrow(StateError('queue unavailable'));
+
+    final result = await executeBackgroundTask(
+      SyncConstants.taskName,
+      operation.call,
+    );
+
+    expect(result, isFalse);
+  });
+
+  test('background task rejects unknown work without processing', () async {
+    final operation = _MockGenericSyncOperation();
+
+    final result = await executeBackgroundTask('unknown', operation.call);
+
+    expect(result, isFalse);
+    verifyNever(operation.call);
   });
 }

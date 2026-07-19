@@ -1,8 +1,8 @@
+import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
+
 enum AppEnvironment { development, staging, production }
 
 abstract final class EnvironmentConfig {
-  static const Duration defaultTimeout = Duration(seconds: 30);
-
   static const String apiBaseUrl = String.fromEnvironment('API_BASE_URL');
   static const String _apiTimeout = String.fromEnvironment('API_TIMEOUT');
   static const String _environment = String.fromEnvironment('ENV');
@@ -39,7 +39,7 @@ abstract final class EnvironmentConfig {
     final milliseconds = int.tryParse(value.trim());
     return milliseconds != null && milliseconds > 0
         ? Duration(milliseconds: milliseconds)
-        : defaultTimeout;
+        : AppConstants.defaultApiTimeout;
   }
 
   static bool parseBool(String value) => value.trim().toLowerCase() == 'true';

@@ -8,17 +8,22 @@ void main() {
   test('uses the resolved application branding defaults', () {
     const config = BrandingConfig();
 
-    expect(config.appName, BrandingDefaults.appName);
-    expect(config.primaryColor, AppColors.primary);
-    expect(config.secondaryColor, AppColors.secondary);
+    expect(config.appNameKey, BrandingDefaults.appNameKey);
+    expect(config.appNameKey, 'app.title');
+    expect(config.primaryColorArgb, BrandingDefaults.primaryColorArgb);
+    expect(config.secondaryColorArgb, BrandingDefaults.secondaryColorArgb);
+    expect(config.primaryColorArgb, AppColors.primary.toARGB32());
+    expect(config.secondaryColorArgb, AppColors.secondary.toARGB32());
   });
 
   test('supports tenant-specific immutable overrides', () {
     const config = BrandingConfig();
 
-    final updated = config.copyWith(primaryColor: AppColors.error);
+    final updated = config.copyWith(
+      primaryColorArgb: AppColors.error.toARGB32(),
+    );
 
-    expect(updated.primaryColor, AppColors.error);
-    expect(config.primaryColor, AppColors.primary);
+    expect(updated.primaryColorArgb, AppColors.error.toARGB32());
+    expect(config.primaryColorArgb, AppColors.primary.toARGB32());
   });
 }

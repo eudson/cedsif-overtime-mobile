@@ -10,7 +10,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         brandingConfigProvider.overrideWithValue(
-          const BrandingConfig(primaryColor: AppColors.error),
+          BrandingConfig(primaryColorArgb: AppColors.error.toARGB32()),
         ),
       ],
     );

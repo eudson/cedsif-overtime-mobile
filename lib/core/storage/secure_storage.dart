@@ -18,6 +18,16 @@ class SecureStorage {
   Future<void> writeRefreshToken(String token) =>
       _storage.write(key: refreshTokenKey, value: token);
 
+  Future<void> writeTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    await Future.wait(<Future<void>>[
+      writeAccessToken(accessToken),
+      writeRefreshToken(refreshToken),
+    ]);
+  }
+
   Future<void> clearTokens() async {
     await Future.wait(<Future<void>>[
       _storage.delete(key: accessTokenKey),

@@ -37,6 +37,30 @@ void main() {
     expect(value['safe'], 'visible');
   });
 
+  test('redacts identity and session-like map fields', () {
+    final value = LogRedactor.redactObject({
+      'authorization': 'raw-auth',
+      'apiKey': 'raw-api-key',
+      'cookie': 'raw-cookie',
+      'session': 'raw-session',
+      'phone': 'raw-phone',
+      'address': 'raw-address',
+      'fullName': 'raw-name',
+    }).toString();
+
+    for (final secret in [
+      'raw-auth',
+      'raw-api-key',
+      'raw-cookie',
+      'raw-session',
+      'raw-phone',
+      'raw-address',
+      'raw-name',
+    ]) {
+      expect(value, isNot(contains(secret)));
+    }
+  });
+
   test('redacts sensitive key-value pairs in text', () {
     final value = LogRedactor.redact(
       'password=hunter2 secret: private token="abc"',

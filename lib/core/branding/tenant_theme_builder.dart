@@ -16,13 +16,15 @@ abstract final class TenantThemeBuilder {
     required Brightness brightness,
     required BrandingConfig branding,
   }) {
+    final primaryColor = Color(branding.primaryColorArgb);
+    final secondaryColor = Color(branding.secondaryColorArgb);
     final colorScheme =
         ColorScheme.fromSeed(
-          seedColor: branding.primaryColor,
+          seedColor: primaryColor,
           brightness: brightness,
         ).copyWith(
-          primary: branding.primaryColor,
-          secondary: branding.secondaryColor,
+          primary: primaryColor,
+          secondary: secondaryColor,
           error: AppColors.error,
         );
     final textTheme =

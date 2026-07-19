@@ -7,7 +7,9 @@ import 'package:cedsif_overtime_mobile/core/constants/app_colors.dart';
 
 void main() {
   test('builds a Material 3 light theme from tenant branding', () {
-    const branding = BrandingConfig(primaryColor: AppColors.error);
+    final branding = BrandingConfig(
+      primaryColorArgb: AppColors.error.toARGB32(),
+    );
 
     final theme = TenantThemeBuilder.light(branding);
 
@@ -17,7 +19,9 @@ void main() {
   });
 
   test('builds a Material 3 dark theme from tenant branding', () {
-    const branding = BrandingConfig(secondaryColor: AppColors.border);
+    final branding = BrandingConfig(
+      secondaryColorArgb: AppColors.border.toARGB32(),
+    );
 
     final theme = TenantThemeBuilder.dark(branding);
 

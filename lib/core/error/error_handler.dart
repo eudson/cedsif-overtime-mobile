@@ -8,32 +8,27 @@ import 'package:cedsif_overtime_mobile/core/error/failures.dart';
 abstract final class ErrorHandler {
   static Failure handle(Object error) {
     return switch (error) {
-      ServerException(:final message, :final code) => ServerFailure(
-        message,
+      ServerException(:final code) => ServerFailure(
+        'errors.generic',
         code: code,
       ),
-      NetworkException(:final message, :final code) => NetworkFailure(
-        message,
+      NetworkException(:final code) => NetworkFailure(
+        'errors.network',
         code: code,
       ),
-      CacheException(:final message, :final code) => CacheFailure(
-        message,
+      CacheException(:final code) => CacheFailure('errors.generic', code: code),
+      AuthException(:final code) => AuthFailure(
+        'errors.sessionExpired',
         code: code,
       ),
-      AuthException(:final message, :final code) => AuthFailure(
-        message,
+      ValidationException(:final code) => ValidationFailure(
+        'errors.generic',
         code: code,
       ),
-      ValidationException(:final message, :final code) => ValidationFailure(
-        message,
-        code: code,
-      ),
-      SocketException() => const NetworkFailure(
-        'Network connection unavailable',
-      ),
+      SocketException() => const NetworkFailure('errors.network'),
       DioException() => _fromDio(error),
-      FormatException() => const ValidationFailure('Invalid data format'),
-      _ => const ServerFailure('An unexpected error occurred'),
+      FormatException() => const ValidationFailure('errors.generic'),
+      _ => const ServerFailure('errors.generic'),
     };
   }
 
@@ -45,17 +40,17 @@ abstract final class ErrorHandler {
       DioExceptionType.connectionError => true,
       _ => false,
     }) {
-      return const NetworkFailure('Network request failed');
+      return const NetworkFailure('errors.network');
     }
 
     final statusCode = error.response?.statusCode;
     final code = statusCode?.toString();
     if (statusCode == 401 || statusCode == 403) {
-      return AuthFailure('Authentication failed', code: code);
+      return AuthFailure('errors.sessionExpired', code: code);
     }
     if (statusCode != null && statusCode >= 400 && statusCode < 500) {
-      return ValidationFailure('Request validation failed', code: code);
+      return ValidationFailure('errors.generic', code: code);
     }
-    return ServerFailure('Server request failed', code: code);
+    return ServerFailure('errors.generic', code: code);
   }
 }

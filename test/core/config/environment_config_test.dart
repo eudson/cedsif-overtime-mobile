@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cedsif_overtime_mobile/core/config/environment_config.dart';
+import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
 
 void main() {
   group('EnvironmentConfig parsing', () {
@@ -26,11 +27,11 @@ void main() {
       );
       expect(
         EnvironmentConfig.parseTimeout('-1'),
-        EnvironmentConfig.defaultTimeout,
+        AppConstants.defaultApiTimeout,
       );
       expect(
         EnvironmentConfig.parseTimeout('nope'),
-        EnvironmentConfig.defaultTimeout,
+        AppConstants.defaultApiTimeout,
       );
     });
 

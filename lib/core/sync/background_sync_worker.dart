@@ -1,12 +1,39 @@
 import 'package:workmanager/workmanager.dart';
 
+import 'package:cedsif_overtime_mobile/core/database/app_database.dart';
+import 'package:cedsif_overtime_mobile/core/sync/generic_sync_processor.dart';
 import 'package:cedsif_overtime_mobile/core/sync/sync_constants.dart';
+
+typedef GenericSyncOperation = Future<bool> Function();
+
+Future<bool> executeBackgroundTask(
+  String taskName,
+  GenericSyncOperation syncOperation,
+) async {
+  if (taskName != SyncConstants.taskName &&
+      taskName != SyncConstants.uniqueWorkName) {
+    return false;
+  }
+
+  try {
+    return await syncOperation();
+  } on Object {
+    return false;
+  }
+}
+
+Future<bool> processGenericBackgroundQueue() async {
+  final database = await AppDatabase.initialize();
+  return GenericSyncProcessor(
+    pendingRequestsBox: database.pendingRequestsBox,
+    handler: const DeferredPendingRequestHandler(),
+  ).processPendingRequests();
+}
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((taskName, inputData) async {
-    return taskName == SyncConstants.taskName ||
-        taskName == SyncConstants.uniqueWorkName;
+    return executeBackgroundTask(taskName, processGenericBackgroundQueue);
   });
 }
 
