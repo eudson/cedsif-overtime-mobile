@@ -9,6 +9,15 @@ import 'package:cedsif_overtime_mobile/core/network/cache_interceptor.dart';
 import 'package:cedsif_overtime_mobile/core/network/network_monitor.dart';
 import 'package:cedsif_overtime_mobile/core/network/token_refresh_interceptor.dart';
 import 'package:cedsif_overtime_mobile/core/storage/secure_storage.dart';
+import 'package:cedsif_overtime_mobile/core/utils/logger.dart';
+
+void _logNetworkMessage(Object message) {
+  final normalizedMessage = message.toString().replaceAll(
+    RegExp('%40', caseSensitive: false),
+    '@',
+  );
+  AppLogger.debug(normalizedMessage);
+}
 
 class AuthHeaderInterceptor extends Interceptor {
   const AuthHeaderInterceptor(this._secureStorage);
@@ -69,6 +78,7 @@ class NetworkClient {
           responseBody: false,
           error: false,
           compact: true,
+          logPrint: _logNetworkMessage,
         ),
     ]);
     return NetworkClient._(dio);
