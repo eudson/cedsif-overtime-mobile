@@ -16,7 +16,7 @@ import 'package:cedsif_overtime_mobile/core/utils/analytics_service.dart';
 import 'package:cedsif_overtime_mobile/core/utils/logger.dart';
 
 Never _missingBootstrapResource(String name) =>
-    throw StateError('$name must be overridden during bootstrap');
+    throw UnimplementedError('$name must be overridden during bootstrap');
 
 final sharedPreferencesProvider = Provider<SharedPreferences>(
   (ref) => _missingBootstrapResource('SharedPreferences'),
@@ -27,7 +27,7 @@ final localStorageProvider = Provider<LocalStorage>(
 );
 
 final secureStorageProvider = Provider<SecureStorage>(
-  (ref) => const SecureStorage(),
+  (ref) => _missingBootstrapResource('SecureStorage'),
 );
 
 final appDatabaseProvider = Provider<AppDatabase>(
@@ -42,10 +42,12 @@ final pendingRequestsBoxProvider = Provider<Box<dynamic>>(
   (ref) => ref.watch(appDatabaseProvider).pendingRequestsBox,
 );
 
-final authEventBusProvider = Provider<AuthEventBus>((ref) => AuthEventBus());
+final authEventBusProvider = Provider<AuthEventBus>(
+  (ref) => _missingBootstrapResource('AuthEventBus'),
+);
 
 final networkMonitorProvider = Provider<NetworkMonitor>(
-  (ref) => NetworkMonitor(),
+  (ref) => _missingBootstrapResource('NetworkMonitor'),
 );
 
 final syncEngineProvider = Provider<SyncEngine>(
@@ -53,12 +55,7 @@ final syncEngineProvider = Provider<SyncEngine>(
 );
 
 final networkClientProvider = Provider<NetworkClient>(
-  (ref) => NetworkClient.create(
-    secureStorage: ref.watch(secureStorageProvider),
-    authEventBus: ref.watch(authEventBusProvider),
-    networkMonitor: ref.watch(networkMonitorProvider),
-    cacheBox: ref.watch(cacheBoxProvider),
-  ),
+  (ref) => _missingBootstrapResource('NetworkClient'),
 );
 
 final dioProvider = Provider<Dio>(
@@ -66,11 +63,11 @@ final dioProvider = Provider<Dio>(
 );
 
 final imageCacheManagerProvider = Provider<ImageCacheManager>(
-  (ref) => ImageCacheManager.shared,
+  (ref) => _missingBootstrapResource('ImageCacheManager'),
 );
 
 final analyticsServiceProvider = Provider<AnalyticsService>(
-  (ref) => AnalyticsService(enabled: false),
+  (ref) => _missingBootstrapResource('AnalyticsService'),
 );
 
 List<Override> createCoreProviderOverrides({

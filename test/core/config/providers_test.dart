@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:mocktail/mocktail.dart';
@@ -27,6 +28,36 @@ class _MockNetworkClient extends Mock implements NetworkClient {}
 class _MockImageCacheManager extends Mock implements ImageCacheManager {}
 
 void main() {
+  test('bootstrap-owned providers require explicit overrides', () {
+    final providers = <ProviderListenable<Object?>>[
+      sharedPreferencesProvider,
+      secureStorageProvider,
+      appDatabaseProvider,
+      authEventBusProvider,
+      networkMonitorProvider,
+      syncEngineProvider,
+      networkClientProvider,
+      imageCacheManagerProvider,
+      analyticsServiceProvider,
+    ];
+
+    for (final provider in providers) {
+      final container = ProviderContainer();
+      expect(
+        () => container.read(provider),
+        throwsA(
+          isA<ProviderException>().having(
+            (error) => error.exception,
+            'exception',
+            isA<UnimplementedError>(),
+          ),
+        ),
+        reason: provider.toString(),
+      );
+      container.dispose();
+    }
+  });
+
   test('bootstrap overrides expose every initialized core resource', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final preferences = await SharedPreferences.getInstance();

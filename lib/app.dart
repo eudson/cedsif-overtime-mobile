@@ -10,14 +10,14 @@ import 'package:cedsif_overtime_mobile/core/config/router.dart';
 import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
 import 'package:cedsif_overtime_mobile/core/network/auth_event_bus.dart';
 
-class App extends ConsumerStatefulWidget {
-  const App({super.key});
+class HorasExtrasApp extends ConsumerStatefulWidget {
+  const HorasExtrasApp({super.key});
 
   @override
-  ConsumerState<App> createState() => _AppState();
+  ConsumerState<HorasExtrasApp> createState() => _HorasExtrasAppState();
 }
 
-class _AppState extends ConsumerState<App> {
+class _HorasExtrasAppState extends ConsumerState<HorasExtrasApp> {
   StreamSubscription<AuthEvent>? _authSubscription;
 
   @override

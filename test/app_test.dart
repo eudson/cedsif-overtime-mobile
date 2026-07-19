@@ -34,7 +34,7 @@ void main() {
             authEventBusProvider.overrideWithValue(eventBus),
             routerProvider.overrideWithValue(router),
           ],
-          child: const App(),
+          child: const HorasExtrasApp(),
         ),
       ),
     );

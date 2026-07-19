@@ -32,7 +32,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(App), findsOneWidget);
+    expect(find.byType(HorasExtrasApp), findsOneWidget);
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

@@ -144,7 +144,7 @@ Widget buildBootstrapRoot(List<Override> overrides) => EasyLocalization(
   child: ProviderScope(
     overrides: overrides,
     observers: const <ProviderObserver>[AppProviderObserver()],
-    child: const App(),
+    child: const HorasExtrasApp(),
   ),
 );
 
