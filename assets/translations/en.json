@@ -1,0 +1,18 @@
+{
+  "app": {
+    "title": "Horas Extras"
+  },
+  "home": {
+    "placeholder": "Home"
+  },
+  "common": {
+    "retry": "Retry",
+    "cancel": "Cancel"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again."
+  },
+  "network": {
+    "sessionExpired": "Your session has expired. Please sign in again."
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "app": {
+    "title": "Horas Extras"
+  },
+  "home": {
+    "placeholder": "Inicio"
+  },
+  "common": {
+    "retry": "Reintentar",
+    "cancel": "Cancelar"
+  },
+  "errors": {
+    "generic": "Algo salió mal. Inténtalo de nuevo."
+  },
+  "network": {
+    "sessionExpired": "Tu sesión ha caducado. Inicia sesión de nuevo."
+  }
+}
