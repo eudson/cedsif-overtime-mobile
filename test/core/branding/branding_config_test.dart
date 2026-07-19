@@ -12,8 +12,8 @@ void main() {
     expect(config.appNameKey, 'app.title');
     expect(config.primaryColorArgb, BrandingDefaults.primaryColorArgb);
     expect(config.secondaryColorArgb, BrandingDefaults.secondaryColorArgb);
-    expect(config.primaryColorArgb, AppColors.primary.toARGB32());
-    expect(config.secondaryColorArgb, AppColors.secondary.toARGB32());
+    expect(config.primaryColorArgb, AppColors.primaryArgb);
+    expect(config.secondaryColorArgb, AppColors.secondaryArgb);
   });
 
   test('supports tenant-specific immutable overrides', () {
@@ -24,6 +24,6 @@ void main() {
     );
 
     expect(updated.primaryColorArgb, AppColors.error.toARGB32());
-    expect(config.primaryColorArgb, AppColors.primary.toARGB32());
+    expect(config.primaryColorArgb, AppColors.primaryArgb);
   });
 }

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:hive/hive.dart';
 
 abstract interface class PendingRequestHandler {
@@ -72,9 +73,54 @@ class GenericSyncProcessor {
   }
 }
 
-class DeferredPendingRequestHandler implements PendingRequestHandler {
-  const DeferredPendingRequestHandler();
+class DioPendingRequestHandler implements PendingRequestHandler {
+  const DioPendingRequestHandler(this._dio);
+
+  final Dio _dio;
+
+  static const Set<String> _safeHeaderNames = <String>{
+    'accept',
+    'accept-language',
+    'content-type',
+    'idempotency-key',
+  };
 
   @override
-  Future<bool> process(Map<String, Object?> request) async => false;
+  Future<bool> process(Map<String, Object?> request) async {
+    final method = request['method'];
+    final path = request['path'];
+    if (method is! String ||
+        method.isEmpty ||
+        path is! String ||
+        path.isEmpty) {
+      return false;
+    }
+
+    final headers = _safeHeaders(request['headers']);
+    try {
+      final response = await _dio.request<dynamic>(
+        path,
+        data: request['body'],
+        options: Options(method: method.toUpperCase(), headers: headers),
+      );
+      final statusCode = response.statusCode;
+      return statusCode != null && statusCode >= 200 && statusCode < 300;
+    } on DioException {
+      return false;
+    }
+  }
+
+  Map<String, Object?> _safeHeaders(Object? rawHeaders) {
+    if (rawHeaders is! Map<Object?, Object?>) {
+      return const <String, Object?>{};
+    }
+    final headers = <String, Object?>{};
+    for (final entry in rawHeaders.entries) {
+      final key = entry.key;
+      if (key is String && _safeHeaderNames.contains(key.toLowerCase())) {
+        headers[key] = entry.value;
+      }
+    }
+    return headers;
+  }
 }

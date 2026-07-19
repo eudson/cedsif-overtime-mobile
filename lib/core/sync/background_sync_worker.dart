@@ -1,6 +1,10 @@
 import 'package:workmanager/workmanager.dart';
 
 import 'package:cedsif_overtime_mobile/core/database/app_database.dart';
+import 'package:cedsif_overtime_mobile/core/network/auth_event_bus.dart';
+import 'package:cedsif_overtime_mobile/core/network/network_client.dart';
+import 'package:cedsif_overtime_mobile/core/network/network_monitor.dart';
+import 'package:cedsif_overtime_mobile/core/storage/secure_storage.dart';
 import 'package:cedsif_overtime_mobile/core/sync/generic_sync_processor.dart';
 import 'package:cedsif_overtime_mobile/core/sync/sync_constants.dart';
 
@@ -24,10 +28,21 @@ Future<bool> executeBackgroundTask(
 
 Future<bool> processGenericBackgroundQueue() async {
   final database = await AppDatabase.initialize();
-  return GenericSyncProcessor(
-    pendingRequestsBox: database.pendingRequestsBox,
-    handler: const DeferredPendingRequestHandler(),
-  ).processPendingRequests();
+  final authEventBus = AuthEventBus();
+  try {
+    final networkClient = NetworkClient.create(
+      secureStorage: const SecureStorage(),
+      authEventBus: authEventBus,
+      networkMonitor: NetworkMonitor(),
+      cacheBox: database.cacheBox,
+    );
+    return GenericSyncProcessor(
+      pendingRequestsBox: database.pendingRequestsBox,
+      handler: DioPendingRequestHandler(networkClient.dio),
+    ).processPendingRequests();
+  } finally {
+    await authEventBus.dispose();
+  }
 }
 
 @pragma('vm:entry-point')
