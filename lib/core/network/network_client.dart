@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
@@ -7,6 +10,7 @@ import 'package:cedsif_overtime_mobile/core/config/environment_config.dart';
 import 'package:cedsif_overtime_mobile/core/network/auth_event_bus.dart';
 import 'package:cedsif_overtime_mobile/core/network/cache_interceptor.dart';
 import 'package:cedsif_overtime_mobile/core/network/network_monitor.dart';
+import 'package:cedsif_overtime_mobile/core/network/request_origin.dart';
 import 'package:cedsif_overtime_mobile/core/network/token_refresh_interceptor.dart';
 import 'package:cedsif_overtime_mobile/core/storage/secure_storage.dart';
 import 'package:cedsif_overtime_mobile/core/utils/logger.dart';
@@ -20,15 +24,21 @@ void _logNetworkMessage(Object message) {
 }
 
 class AuthHeaderInterceptor extends Interceptor {
-  const AuthHeaderInterceptor(this._secureStorage);
+  const AuthHeaderInterceptor(this._secureStorage, {required String apiBaseUrl})
+    : _apiBaseUrl = apiBaseUrl;
 
   final SecureStorage _secureStorage;
+  final String _apiBaseUrl;
 
   @override
   Future<void> onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
+    if (!RequestOrigin.isAllowed(options, _apiBaseUrl)) {
+      handler.next(options);
+      return;
+    }
     final accessToken = await _secureStorage.readAccessToken();
     if (accessToken != null && accessToken.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $accessToken';
@@ -62,14 +72,25 @@ class NetworkClient {
     final refreshDio = Dio(options);
     dio.interceptors.clear(keepImplyContentTypeInterceptor: false);
     dio.interceptors.addAll(<Interceptor>[
-      AuthHeaderInterceptor(secureStorage),
+      AuthHeaderInterceptor(secureStorage, apiBaseUrl: baseUrl),
       TokenRefreshInterceptor(
         dio: dio,
         refreshDio: refreshDio,
         secureStorage: secureStorage,
         authEventBus: authEventBus,
+        apiBaseUrl: baseUrl,
+        onSessionExpired: () => cacheBox.clear().then((_) {}),
       ),
-      CacheInterceptor(cacheBox: cacheBox, networkMonitor: networkMonitor),
+      CacheInterceptor(
+        cacheBox: cacheBox,
+        networkMonitor: networkMonitor,
+        scopeProvider: () async {
+          final token = await secureStorage.readAccessToken();
+          return token == null || token.isEmpty
+              ? 'anonymous'
+              : sha256.convert(utf8.encode(token)).toString();
+        },
+      ),
       if (includeDebugLogger)
         PrettyDioLogger(
           requestHeader: false,

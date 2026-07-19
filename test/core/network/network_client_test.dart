@@ -40,7 +40,10 @@ void main() {
   test('auth interceptor injects a stored bearer token', () async {
     final storage = _MockSecureStorage();
     when(storage.readAccessToken).thenAnswer((_) async => 'access-token');
-    final interceptor = AuthHeaderInterceptor(storage);
+    final interceptor = AuthHeaderInterceptor(
+      storage,
+      apiBaseUrl: 'https://example.test',
+    );
     final options = RequestOptions(path: '/items');
     final handler = _RequestHandler();
 
@@ -53,7 +56,10 @@ void main() {
   test('auth interceptor leaves headers untouched without a token', () async {
     final storage = _MockSecureStorage();
     when(storage.readAccessToken).thenAnswer((_) async => null);
-    final interceptor = AuthHeaderInterceptor(storage);
+    final interceptor = AuthHeaderInterceptor(
+      storage,
+      apiBaseUrl: 'https://example.test',
+    );
     final options = RequestOptions(path: '/items');
     final handler = _RequestHandler();
 
@@ -80,6 +86,25 @@ void main() {
     expect(client.dio.interceptors[0], isA<AuthHeaderInterceptor>());
     expect(client.dio.interceptors[1], isA<TokenRefreshInterceptor>());
     expect(client.dio.interceptors[2], isA<CacheInterceptor>());
+  });
+
+  test('auth interceptor never attaches credentials cross-origin', () async {
+    final storage = _MockSecureStorage();
+    when(storage.readAccessToken).thenAnswer((_) async => 'access-token');
+    final interceptor = AuthHeaderInterceptor(
+      storage,
+      apiBaseUrl: 'https://api.example.test',
+    );
+    final options = RequestOptions(
+      path: 'https://attacker.example/items',
+      baseUrl: 'https://api.example.test',
+    );
+    final handler = _RequestHandler();
+
+    await interceptor.onRequest(options, handler);
+
+    expect(options.headers, isNot(contains('Authorization')));
+    verifyNever(storage.readAccessToken);
   });
 
   test('debug network logs use AppLogger redaction', () {

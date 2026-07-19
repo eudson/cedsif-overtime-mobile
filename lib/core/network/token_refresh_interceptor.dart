@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import 'package:cedsif_overtime_mobile/core/constants/api_endpoints.dart';
 import 'package:cedsif_overtime_mobile/core/network/auth_event_bus.dart';
+import 'package:cedsif_overtime_mobile/core/network/request_origin.dart';
 import 'package:cedsif_overtime_mobile/core/storage/secure_storage.dart';
 
 class TokenRefreshInterceptor extends Interceptor {
@@ -12,10 +13,14 @@ class TokenRefreshInterceptor extends Interceptor {
     required Dio refreshDio,
     required SecureStorage secureStorage,
     required AuthEventBus authEventBus,
+    String? apiBaseUrl,
+    Future<void> Function()? onSessionExpired,
   }) : _dio = dio,
        _refreshDio = refreshDio,
        _secureStorage = secureStorage,
-       _authEventBus = authEventBus;
+       _authEventBus = authEventBus,
+       _apiBaseUrl = apiBaseUrl ?? dio.options.baseUrl,
+       _onSessionExpired = onSessionExpired;
 
   static const String retryMarker = 'auth_refresh_retried';
 
@@ -23,6 +28,8 @@ class TokenRefreshInterceptor extends Interceptor {
   final Dio _refreshDio;
   final SecureStorage _secureStorage;
   final AuthEventBus _authEventBus;
+  final String _apiBaseUrl;
+  final Future<void> Function()? _onSessionExpired;
   Future<bool>? _activeRefresh;
 
   @override
@@ -32,6 +39,7 @@ class TokenRefreshInterceptor extends Interceptor {
   ) async {
     final request = err.requestOptions;
     if (err.response?.statusCode != 401 ||
+        !RequestOrigin.isAllowed(request, _apiBaseUrl) ||
         request.extra[retryMarker] == true ||
         request.path == ApiEndpoints.refreshToken) {
       handler.next(err);
@@ -114,6 +122,11 @@ class TokenRefreshInterceptor extends Interceptor {
     } on Object {
       // Session expiry still propagates when the platform store is unavailable.
     } finally {
+      try {
+        await _onSessionExpired?.call();
+      } on Object {
+        // Session expiry still propagates when cache cleanup is unavailable.
+      }
       _authEventBus.emit(AuthEvent.sessionExpired);
     }
     return false;

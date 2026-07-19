@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cedsif_overtime_mobile/core/constants/api_endpoints.dart';
+import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
 
 void main() {
   test('API endpoints are relative, rooted, and distinct', () {
@@ -10,5 +11,10 @@ void main() {
       expect(endpoint, startsWith('/'));
       expect(Uri.tryParse(endpoint)?.hasScheme, isFalse);
     }
+  });
+
+  test('cache TTL is centralized and positive', () {
+    expect(AppConstants.cacheTtl, const Duration(minutes: 15));
+    expect(AppConstants.cacheTtl, greaterThan(Duration.zero));
   });
 }

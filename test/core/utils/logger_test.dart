@@ -38,4 +38,18 @@ void main() {
     expect(received, isNot(contains('raw-password')));
     expect(received, isNot(contains('raw-cookie')));
   });
+
+  test('never sends compound token values to the sink', () {
+    final sink = _RecordingSink();
+    AppLogger.setSink(sink);
+
+    AppLogger.info({
+      'accessToken': 'raw-access-token',
+      'nested': {'refresh_token': 'raw-refresh-token'},
+    });
+
+    final received = sink.records.single.message.toString();
+    expect(received, isNot(contains('raw-access-token')));
+    expect(received, isNot(contains('raw-refresh-token')));
+  });
 }

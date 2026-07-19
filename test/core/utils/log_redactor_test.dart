@@ -61,6 +61,31 @@ void main() {
     }
   });
 
+  test('redacts compound token fields in maps and text', () {
+    final mapValue = LogRedactor.redactObject({
+      'accessToken': 'raw-access-camel',
+      'refreshToken': 'raw-refresh-camel',
+      'ACCESS_TOKEN': 'raw-access-snake',
+      'refresh-token': 'raw-refresh-kebab',
+    }).toString();
+    final textValue = LogRedactor.redact(
+      'accessToken=raw-text-a refresh_token:raw-text-b '
+      'REFRESH-TOKEN="raw-text-c"',
+    );
+
+    for (final secret in [
+      'raw-access-camel',
+      'raw-refresh-camel',
+      'raw-access-snake',
+      'raw-refresh-kebab',
+      'raw-text-a',
+      'raw-text-b',
+      'raw-text-c',
+    ]) {
+      expect('$mapValue $textValue', isNot(contains(secret)));
+    }
+  });
+
   test('redacts sensitive key-value pairs in text', () {
     final value = LogRedactor.redact(
       'password=hunter2 secret: private token="abc"',

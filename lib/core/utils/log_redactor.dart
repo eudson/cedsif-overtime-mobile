@@ -10,13 +10,15 @@ abstract final class LogRedactor {
     caseSensitive: false,
   );
   static final RegExp _sensitivePairPattern = RegExp(
-    r'''\b(authorization|api[_-]?key|token|password|secret(?:[_-]?key)?|cookie|session|phone|address|(?:first|last|full)[_-]?name|name)\s*[:=]\s*(?:["'][^"']*["']|[^\s,;}]+)''',
+    r'''\b(authorization|api[_-]?key|(?:(?:access|refresh)[_-]?)?token|password|secret(?:[_-]?key)?|cookie|session|phone|address|(?:first|last|full)[_-]?name|name)\s*[:=]\s*(?:["'][^"']*["']|[^\s,;}]+)''',
     caseSensitive: false,
   );
   static const Set<String> _sensitiveKeys = {
     'authorization',
     'apikey',
     'token',
+    'accesstoken',
+    'refreshtoken',
     'password',
     'secret',
     'secretkey',

@@ -198,4 +198,30 @@ void main() {
 
     await event;
   });
+
+  test('failed refresh invokes session cache clearing', () async {
+    final requestDio = Dio(BaseOptions(baseUrl: 'https://example.test'));
+    final refreshDio = Dio(BaseOptions(baseUrl: 'https://example.test'));
+    requestDio.httpClientAdapter = _QueueAdapter(
+      (_) async => _jsonResponse(401, <String, Object?>{'error': 'expired'}),
+    );
+    when(storage.readRefreshToken).thenAnswer((_) async => null);
+    var cacheCleared = false;
+    requestDio.interceptors.add(
+      TokenRefreshInterceptor(
+        dio: requestDio,
+        refreshDio: refreshDio,
+        secureStorage: storage,
+        authEventBus: eventBus,
+        onSessionExpired: () async => cacheCleared = true,
+      ),
+    );
+
+    await expectLater(
+      requestDio.get<dynamic>('/protected'),
+      throwsA(isA<DioException>()),
+    );
+
+    expect(cacheCleared, isTrue);
+  });
 }

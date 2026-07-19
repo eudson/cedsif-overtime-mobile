@@ -29,8 +29,9 @@ Future<bool> executeBackgroundTask(
 Future<bool> processGenericBackgroundQueue() async {
   final database = await AppDatabase.initialize();
   final authEventBus = AuthEventBus();
+  NetworkClient? networkClient;
   try {
-    final networkClient = NetworkClient.create(
+    networkClient = NetworkClient.create(
       secureStorage: const SecureStorage(),
       authEventBus: authEventBus,
       networkMonitor: NetworkMonitor(),
@@ -41,7 +42,12 @@ Future<bool> processGenericBackgroundQueue() async {
       handler: DioPendingRequestHandler(networkClient.dio),
     ).processPendingRequests();
   } finally {
+    networkClient?.dio.close(force: true);
     await authEventBus.dispose();
+    await Future.wait(<Future<void>>[
+      database.cacheBox.close(),
+      database.pendingRequestsBox.close(),
+    ]);
   }
 }
 
