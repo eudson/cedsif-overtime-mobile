@@ -1,16 +1,23 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 
 final class AnalyticsService {
-  const AnalyticsService({this.analytics, required this.enabled});
+  AnalyticsService({FirebaseAnalytics? analytics, required this.enabled})
+    : _analytics = analytics;
 
-  final FirebaseAnalytics? analytics;
   final bool enabled;
+  FirebaseAnalytics? _analytics;
+
+  void attach(FirebaseAnalytics analytics) {
+    if (enabled) {
+      _analytics = analytics;
+    }
+  }
 
   Future<void> logEvent({
     required String name,
     Map<String, Object>? parameters,
   }) async {
-    final client = analytics;
+    final client = _analytics;
     if (!enabled || client == null) return;
 
     try {

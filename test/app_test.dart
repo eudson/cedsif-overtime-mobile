@@ -1,10 +1,10 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cedsif_overtime_mobile/app.dart';
-import 'package:cedsif_overtime_mobile/bootstrap.dart';
 import 'package:cedsif_overtime_mobile/core/config/providers.dart';
 import 'package:cedsif_overtime_mobile/core/config/router.dart';
 import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
@@ -16,7 +16,7 @@ void main() {
     await EasyLocalization.ensureInitialized();
   });
 
-  testWidgets('bootstrap root reaches the production application', (
+  testWidgets('builds MaterialApp.router and handles session expiry', (
     tester,
   ) async {
     final eventBus = AuthEventBus();
@@ -25,14 +25,25 @@ void main() {
     addTearDown(router.dispose);
 
     await tester.pumpWidget(
-      buildBootstrapRoot([
-        authEventBusProvider.overrideWithValue(eventBus),
-        routerProvider.overrideWithValue(router),
-      ]),
+      EasyLocalization(
+        supportedLocales: const <Locale>[Locale('en'), Locale('es')],
+        path: 'assets/translations',
+        fallbackLocale: const Locale('en'),
+        child: ProviderScope(
+          overrides: [
+            authEventBusProvider.overrideWithValue(eventBus),
+            routerProvider.overrideWithValue(router),
+          ],
+          child: const App(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(App), findsOneWidget);
     expect(find.byType(MaterialApp), findsOneWidget);
+    eventBus.emit(AuthEvent.sessionExpired);
+    await tester.pump();
+
+    expect(router.state.uri.path, RouteConstants.splash);
   });
 }

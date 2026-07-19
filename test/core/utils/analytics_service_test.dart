@@ -27,7 +27,7 @@ void main() {
   test('is a no-op when disabled or unavailable', () async {
     final analytics = _MockFirebaseAnalytics();
     final disabled = AnalyticsService(analytics: analytics, enabled: false);
-    const unavailable = AnalyticsService(enabled: true);
+    final unavailable = AnalyticsService(enabled: true);
 
     await disabled.logEvent(name: 'ignored');
     await unavailable.logEvent(name: 'ignored');
@@ -51,5 +51,37 @@ void main() {
     final service = AnalyticsService(analytics: analytics, enabled: true);
 
     await expectLater(service.logEvent(name: 'opened'), completes);
+  });
+
+  test('supports attaching analytics after application startup', () async {
+    final analytics = _MockFirebaseAnalytics();
+    when(
+      () => analytics.logEvent(
+        name: any(named: 'name'),
+        parameters: any(named: 'parameters'),
+      ),
+    ).thenAnswer((_) async {});
+    final service = AnalyticsService(enabled: true);
+
+    await service.logEvent(name: 'before-ready');
+    service.attach(analytics);
+    await service.logEvent(name: 'after-ready');
+
+    verify(() => analytics.logEvent(name: 'after-ready')).called(1);
+    verifyNever(() => analytics.logEvent(name: 'before-ready'));
+  });
+
+  test('ignores deferred attachment when analytics is disabled', () async {
+    final analytics = _MockFirebaseAnalytics();
+    final service = AnalyticsService(enabled: false)..attach(analytics);
+
+    await service.logEvent(name: 'ignored');
+
+    verifyNever(
+      () => analytics.logEvent(
+        name: any(named: 'name'),
+        parameters: any(named: 'parameters'),
+      ),
+    );
   });
 }

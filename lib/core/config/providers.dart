@@ -1,0 +1,113 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
+import 'package:hive/hive.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:cedsif_overtime_mobile/core/database/app_database.dart';
+import 'package:cedsif_overtime_mobile/core/network/auth_event_bus.dart';
+import 'package:cedsif_overtime_mobile/core/network/network_client.dart';
+import 'package:cedsif_overtime_mobile/core/network/network_monitor.dart';
+import 'package:cedsif_overtime_mobile/core/storage/image_cache_manager.dart';
+import 'package:cedsif_overtime_mobile/core/storage/local_storage.dart';
+import 'package:cedsif_overtime_mobile/core/storage/secure_storage.dart';
+import 'package:cedsif_overtime_mobile/core/sync/sync_engine.dart';
+import 'package:cedsif_overtime_mobile/core/utils/analytics_service.dart';
+import 'package:cedsif_overtime_mobile/core/utils/logger.dart';
+
+Never _missingBootstrapResource(String name) =>
+    throw StateError('$name must be overridden during bootstrap');
+
+final sharedPreferencesProvider = Provider<SharedPreferences>(
+  (ref) => _missingBootstrapResource('SharedPreferences'),
+);
+
+final localStorageProvider = Provider<LocalStorage>(
+  (ref) => LocalStorage(ref.watch(sharedPreferencesProvider)),
+);
+
+final secureStorageProvider = Provider<SecureStorage>(
+  (ref) => const SecureStorage(),
+);
+
+final appDatabaseProvider = Provider<AppDatabase>(
+  (ref) => _missingBootstrapResource('AppDatabase'),
+);
+
+final cacheBoxProvider = Provider<Box<dynamic>>(
+  (ref) => ref.watch(appDatabaseProvider).cacheBox,
+);
+
+final pendingRequestsBoxProvider = Provider<Box<dynamic>>(
+  (ref) => ref.watch(appDatabaseProvider).pendingRequestsBox,
+);
+
+final authEventBusProvider = Provider<AuthEventBus>((ref) => AuthEventBus());
+
+final networkMonitorProvider = Provider<NetworkMonitor>(
+  (ref) => NetworkMonitor(),
+);
+
+final syncEngineProvider = Provider<SyncEngine>(
+  (ref) => _missingBootstrapResource('SyncEngine'),
+);
+
+final networkClientProvider = Provider<NetworkClient>(
+  (ref) => NetworkClient.create(
+    secureStorage: ref.watch(secureStorageProvider),
+    authEventBus: ref.watch(authEventBusProvider),
+    networkMonitor: ref.watch(networkMonitorProvider),
+    cacheBox: ref.watch(cacheBoxProvider),
+  ),
+);
+
+final dioProvider = Provider<Dio>(
+  (ref) => ref.watch(networkClientProvider).dio,
+);
+
+final imageCacheManagerProvider = Provider<ImageCacheManager>(
+  (ref) => ImageCacheManager.shared,
+);
+
+final analyticsServiceProvider = Provider<AnalyticsService>(
+  (ref) => AnalyticsService(enabled: false),
+);
+
+List<Override> createCoreProviderOverrides({
+  required SharedPreferences preferences,
+  required AppDatabase database,
+  required SecureStorage secureStorage,
+  required AuthEventBus authEventBus,
+  required NetworkMonitor networkMonitor,
+  required SyncEngine syncEngine,
+  required NetworkClient networkClient,
+  required ImageCacheManager imageCacheManager,
+  required AnalyticsService analyticsService,
+}) => <Override>[
+  sharedPreferencesProvider.overrideWithValue(preferences),
+  appDatabaseProvider.overrideWithValue(database),
+  secureStorageProvider.overrideWithValue(secureStorage),
+  authEventBusProvider.overrideWithValue(authEventBus),
+  networkMonitorProvider.overrideWithValue(networkMonitor),
+  syncEngineProvider.overrideWithValue(syncEngine),
+  networkClientProvider.overrideWithValue(networkClient),
+  imageCacheManagerProvider.overrideWithValue(imageCacheManager),
+  analyticsServiceProvider.overrideWithValue(analyticsService),
+];
+
+final class AppProviderObserver extends ProviderObserver {
+  const AppProviderObserver();
+
+  @override
+  void providerDidFail(
+    ProviderObserverContext context,
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    AppLogger.error(
+      'Provider failure: ${context.provider.name ?? context.provider.runtimeType}',
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+}

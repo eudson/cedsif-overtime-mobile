@@ -1,0 +1,78 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:cedsif_overtime_mobile/core/config/providers.dart';
+import 'package:cedsif_overtime_mobile/core/database/app_database.dart';
+import 'package:cedsif_overtime_mobile/core/network/auth_event_bus.dart';
+import 'package:cedsif_overtime_mobile/core/network/network_client.dart';
+import 'package:cedsif_overtime_mobile/core/network/network_monitor.dart';
+import 'package:cedsif_overtime_mobile/core/storage/image_cache_manager.dart';
+import 'package:cedsif_overtime_mobile/core/storage/secure_storage.dart';
+import 'package:cedsif_overtime_mobile/core/sync/sync_engine.dart';
+import 'package:cedsif_overtime_mobile/core/utils/analytics_service.dart';
+
+class _MockDatabase extends Mock implements AppDatabase {}
+
+class _MockBox extends Mock implements Box<dynamic> {}
+
+class _MockSecureStorage extends Mock implements SecureStorage {}
+
+class _MockNetworkMonitor extends Mock implements NetworkMonitor {}
+
+class _MockNetworkClient extends Mock implements NetworkClient {}
+
+class _MockImageCacheManager extends Mock implements ImageCacheManager {}
+
+void main() {
+  test('bootstrap overrides expose every initialized core resource', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final preferences = await SharedPreferences.getInstance();
+    final database = _MockDatabase();
+    final cacheBox = _MockBox();
+    final pendingBox = _MockBox();
+    when(() => database.cacheBox).thenReturn(cacheBox);
+    when(() => database.pendingRequestsBox).thenReturn(pendingBox);
+    final secureStorage = _MockSecureStorage();
+    final authEventBus = AuthEventBus();
+    final networkMonitor = _MockNetworkMonitor();
+    final syncEngine = SyncEngine(
+      connectivityChanges: const Stream<bool>.empty(),
+      initiallyOnline: true,
+    );
+    final networkClient = _MockNetworkClient();
+    final imageCacheManager = _MockImageCacheManager();
+    final analyticsService = AnalyticsService(enabled: false);
+    final container = ProviderContainer(
+      overrides: createCoreProviderOverrides(
+        preferences: preferences,
+        database: database,
+        secureStorage: secureStorage,
+        authEventBus: authEventBus,
+        networkMonitor: networkMonitor,
+        syncEngine: syncEngine,
+        networkClient: networkClient,
+        imageCacheManager: imageCacheManager,
+        analyticsService: analyticsService,
+      ),
+    );
+    addTearDown(container.dispose);
+    addTearDown(authEventBus.dispose);
+    addTearDown(syncEngine.dispose);
+
+    expect(container.read(sharedPreferencesProvider), same(preferences));
+    expect(container.read(localStorageProvider), isNotNull);
+    expect(container.read(secureStorageProvider), same(secureStorage));
+    expect(container.read(appDatabaseProvider), same(database));
+    expect(container.read(cacheBoxProvider), same(cacheBox));
+    expect(container.read(pendingRequestsBoxProvider), same(pendingBox));
+    expect(container.read(authEventBusProvider), same(authEventBus));
+    expect(container.read(networkMonitorProvider), same(networkMonitor));
+    expect(container.read(syncEngineProvider), same(syncEngine));
+    expect(container.read(networkClientProvider), same(networkClient));
+    expect(container.read(imageCacheManagerProvider), same(imageCacheManager));
+    expect(container.read(analyticsServiceProvider), same(analyticsService));
+  });
+}

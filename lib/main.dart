@@ -1,5 +1,3 @@
-import 'package:flutter/widgets.dart';
+import 'package:cedsif_overtime_mobile/bootstrap.dart';
 
-void main() {
-  runApp(const SizedBox(key: Key('bootstrap-root')));
-}
+void main() => bootstrap();
