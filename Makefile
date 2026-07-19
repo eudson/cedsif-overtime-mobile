@@ -8,10 +8,10 @@ get:
 	flutter pub get
 
 build-runner:
-	flutter pub run build_runner build --delete-conflicting-outputs --force-jit
+	flutter pub run build_runner build --force-jit
 
 build-runner-watch:
-	flutter pub run build_runner watch --delete-conflicting-outputs --force-jit
+	flutter pub run build_runner watch --force-jit
 
 format:
 	dart format --output=none --set-exit-if-changed lib test
