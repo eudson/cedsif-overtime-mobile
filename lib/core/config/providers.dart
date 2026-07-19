@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:hive/hive.dart';
@@ -82,15 +85,43 @@ List<Override> createCoreProviderOverrides({
   required AnalyticsService analyticsService,
 }) => <Override>[
   sharedPreferencesProvider.overrideWithValue(preferences),
-  appDatabaseProvider.overrideWithValue(database),
+  appDatabaseProvider.overrideWith((ref) {
+    ref.onDispose(() => unawaited(database.close()));
+    return database;
+  }),
   secureStorageProvider.overrideWithValue(secureStorage),
-  authEventBusProvider.overrideWithValue(authEventBus),
+  authEventBusProvider.overrideWith((ref) {
+    ref.onDispose(() => unawaited(authEventBus.dispose()));
+    return authEventBus;
+  }),
   networkMonitorProvider.overrideWithValue(networkMonitor),
-  syncEngineProvider.overrideWithValue(syncEngine),
-  networkClientProvider.overrideWithValue(networkClient),
+  syncEngineProvider.overrideWith((ref) {
+    ref.onDispose(() => unawaited(syncEngine.dispose()));
+    return syncEngine;
+  }),
+  networkClientProvider.overrideWith((ref) {
+    ref.onDispose(networkClient.close);
+    return networkClient;
+  }),
   imageCacheManagerProvider.overrideWithValue(imageCacheManager),
   analyticsServiceProvider.overrideWithValue(analyticsService),
 ];
+
+class CoreResourceOwner extends ConsumerWidget {
+  const CoreResourceOwner({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref
+      ..watch(appDatabaseProvider)
+      ..watch(authEventBusProvider)
+      ..watch(syncEngineProvider)
+      ..watch(networkClientProvider);
+    return child;
+  }
+}
 
 final class AppProviderObserver extends ProviderObserver {
   const AppProviderObserver();

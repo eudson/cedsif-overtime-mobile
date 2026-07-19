@@ -114,6 +114,17 @@ Future<void> initializeFirebaseAfterApp({
   );
 }
 
+Future<void> initializeBackgroundServicesAfterApp({
+  required VoidCallback appRunner,
+  required Future<void> Function() initializeBackgroundServices,
+}) {
+  appRunner();
+  return runNonCriticalStep<void>(
+    'background_services',
+    initializeBackgroundServices,
+  );
+}
+
 Future<void> _initializeFirebaseAndAnalytics({
   required FirebaseInitializer initializeFirebase,
   required AnalyticsFactory analyticsFactory,
@@ -144,7 +155,16 @@ Widget buildBootstrapRoot(List<Override> overrides) => EasyLocalization(
   child: ProviderScope(
     overrides: overrides,
     observers: const <ProviderObserver>[AppProviderObserver()],
-    child: const HorasExtrasApp(),
+    child: const CoreResourceOwner(child: HorasExtrasApp()),
+  ),
+);
+
+Widget buildBootstrapFallbackRoot() => const MaterialApp(
+  debugShowCheckedModeBanner: false,
+  home: Scaffold(
+    body: Center(
+      child: Icon(Icons.error_outline, color: AppColors.error, size: 48),
+    ),
   ),
 );
 
@@ -165,10 +185,16 @@ void bootstrap() {
 Future<bool> initializeApplication({BootstrapStatus? status}) async {
   final bootstrapStatus = status ?? BootstrapStatus();
   WidgetsFlutterBinding.ensureInitialized();
-  await runNonCriticalStep<void>(
-    'localization',
-    EasyLocalization.ensureInitialized,
-  );
+  final localizationReady =
+      await runNonCriticalStep<bool>('localization', () async {
+        await EasyLocalization.ensureInitialized();
+        return true;
+      }) ??
+      false;
+  if (!localizationReady) {
+    runApp(buildBootstrapFallbackRoot());
+    return bootstrapStatus.sentryReady;
+  }
   await runNonCriticalStep<void>('system_ui', () async {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(statusBarColor: AppColors.primary),
@@ -206,6 +232,11 @@ Future<bool> initializeApplication({BootstrapStatus? status}) async {
     'shared_preferences',
     SharedPreferences.getInstance,
   );
+  if (database == null || preferences == null) {
+    await database?.close();
+    runApp(buildBootstrapFallbackRoot());
+    return bootstrapStatus.sentryReady;
+  }
   final secureStorage = const SecureStorage();
   final authEventBus = AuthEventBus();
   final networkMonitor = NetworkMonitor();
@@ -224,38 +255,39 @@ Future<bool> initializeApplication({BootstrapStatus? status}) async {
     enabled: EnvironmentConfig.enableAnalytics,
   );
 
-  final overrides = <Override>[
-    secureStorageProvider.overrideWithValue(secureStorage),
-    authEventBusProvider.overrideWithValue(authEventBus),
-    networkMonitorProvider.overrideWithValue(networkMonitor),
-    syncEngineProvider.overrideWithValue(syncEngine),
-    imageCacheManagerProvider.overrideWithValue(imageCacheManager),
-    analyticsServiceProvider.overrideWithValue(analyticsService),
-  ];
-  if (preferences != null) {
-    overrides.add(sharedPreferencesProvider.overrideWithValue(preferences));
-  }
-  if (database != null) {
-    final networkClient = NetworkClient.create(
-      secureStorage: secureStorage,
-      authEventBus: authEventBus,
-      networkMonitor: networkMonitor,
-      cacheBox: database.cacheBox,
-    );
-    overrides
-      ..add(appDatabaseProvider.overrideWithValue(database))
-      ..add(networkClientProvider.overrideWithValue(networkClient));
-  }
+  final networkClient = NetworkClient.create(
+    secureStorage: secureStorage,
+    authEventBus: authEventBus,
+    networkMonitor: networkMonitor,
+    cacheBox: database.cacheBox,
+  );
+  final overrides = createCoreProviderOverrides(
+    preferences: preferences,
+    database: database,
+    secureStorage: secureStorage,
+    authEventBus: authEventBus,
+    networkMonitor: networkMonitor,
+    syncEngine: syncEngine,
+    networkClient: networkClient,
+    imageCacheManager: imageCacheManager,
+    analyticsService: analyticsService,
+  );
 
-  await runNonCriticalStep<void>('workmanager', () async {
-    final worker = BackgroundSyncWorker();
-    await worker.initialize();
-    await worker.registerPeriodicSync();
-  });
+  void appRunner() => runApp(buildBootstrapRoot(overrides));
+  unawaited(
+    initializeBackgroundServicesAfterApp(
+      appRunner: appRunner,
+      initializeBackgroundServices: () async {
+        final worker = BackgroundSyncWorker();
+        await worker.initialize();
+        await worker.registerPeriodicSync();
+      },
+    ),
+  );
 
   unawaited(
     initializeFirebaseAfterApp(
-      appRunner: () => runApp(buildBootstrapRoot(overrides)),
+      appRunner: () {},
       initializeFirebase: _initializeFirebase,
       analyticsFactory: () => FirebaseAnalytics.instance,
       analyticsService: analyticsService,

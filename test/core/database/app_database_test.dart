@@ -32,4 +32,30 @@ void main() {
     expect(database.cacheBox, same(cacheBox));
     expect(database.pendingRequestsBox, same(pendingRequestsBox));
   });
+
+  test('closes both owned boxes once', () async {
+    final hive = _MockHive();
+    final cacheBox = _MockBox();
+    final pendingRequestsBox = _MockBox();
+    when(
+      () => hive.openBox<dynamic>(AppDatabase.cacheBoxName),
+    ).thenAnswer((_) async => cacheBox);
+    when(
+      () => hive.openBox<dynamic>(AppDatabase.pendingRequestsBoxName),
+    ).thenAnswer((_) async => pendingRequestsBox);
+    when(() => cacheBox.isOpen).thenReturn(true);
+    when(() => pendingRequestsBox.isOpen).thenReturn(true);
+    when(() => cacheBox.close()).thenAnswer((_) async {});
+    when(() => pendingRequestsBox.close()).thenAnswer((_) async {});
+    final database = await AppDatabase.initialize(
+      hive: hive,
+      hiveInitializer: (_) async {},
+    );
+
+    await database.close();
+    await database.close();
+
+    verify(() => cacheBox.close()).called(1);
+    verify(() => pendingRequestsBox.close()).called(1);
+  });
 }

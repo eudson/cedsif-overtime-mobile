@@ -3,16 +3,14 @@ import 'package:hive_flutter/hive_flutter.dart';
 typedef HiveInitializer = Future<void> Function(HiveInterface hive);
 
 class AppDatabase {
-  const AppDatabase._({
-    required this.cacheBox,
-    required this.pendingRequestsBox,
-  });
+  AppDatabase._({required this.cacheBox, required this.pendingRequestsBox});
 
   static const cacheBoxName = 'cache';
   static const pendingRequestsBoxName = 'pending_requests';
 
   final Box<dynamic> cacheBox;
   final Box<dynamic> pendingRequestsBox;
+  bool _isClosed = false;
 
   static Future<AppDatabase> initialize({
     HiveInterface? hive,
@@ -31,4 +29,15 @@ class AppDatabase {
   }
 
   static Future<void> _initializeHive(HiveInterface hive) => hive.initFlutter();
+
+  Future<void> close() async {
+    if (_isClosed) {
+      return;
+    }
+    _isClosed = true;
+    await Future.wait<void>(<Future<void>>[
+      if (cacheBox.isOpen) cacheBox.close(),
+      if (pendingRequestsBox.isOpen) pendingRequestsBox.close(),
+    ]);
+  }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -71,6 +72,29 @@ void main() {
     await initialization;
     await service.logEvent(name: 'ready');
     verify(() => analytics.logEvent(name: 'ready')).called(1);
+  });
+
+  test(
+    'app runner is invoked without waiting for background services',
+    () async {
+      final backgroundServices = Completer<void>();
+      var appRan = false;
+
+      final initialization = initializeBackgroundServicesAfterApp(
+        appRunner: () => appRan = true,
+        initializeBackgroundServices: () => backgroundServices.future,
+      );
+
+      expect(appRan, isTrue);
+      backgroundServices.complete();
+      await initialization;
+    },
+  );
+
+  testWidgets('fallback root renders without localization', (tester) async {
+    await tester.pumpWidget(buildBootstrapFallbackRoot());
+
+    expect(find.byIcon(Icons.error_outline), findsOneWidget);
   });
 
   test('Firebase failure leaves the running app and analytics safe', () async {

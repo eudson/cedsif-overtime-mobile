@@ -27,6 +27,8 @@ class _MockNetworkClient extends Mock implements NetworkClient {}
 
 class _MockImageCacheManager extends Mock implements ImageCacheManager {}
 
+class _MockSyncEngine extends Mock implements SyncEngine {}
+
 void main() {
   test('bootstrap-owned providers require explicit overrides', () {
     final providers = <ProviderListenable<Object?>>[
@@ -76,6 +78,8 @@ void main() {
     final networkClient = _MockNetworkClient();
     final imageCacheManager = _MockImageCacheManager();
     final analyticsService = AnalyticsService(enabled: false);
+    when(() => database.close()).thenAnswer((_) async {});
+    when(() => networkClient.close()).thenReturn(null);
     final container = ProviderContainer(
       overrides: createCoreProviderOverrides(
         preferences: preferences,
@@ -90,8 +94,6 @@ void main() {
       ),
     );
     addTearDown(container.dispose);
-    addTearDown(authEventBus.dispose);
-    addTearDown(syncEngine.dispose);
 
     expect(container.read(sharedPreferencesProvider), same(preferences));
     expect(container.read(localStorageProvider), isNotNull);
@@ -105,5 +107,46 @@ void main() {
     expect(container.read(networkClientProvider), same(networkClient));
     expect(container.read(imageCacheManagerProvider), same(imageCacheManager));
     expect(container.read(analyticsServiceProvider), same(analyticsService));
+  });
+
+  test('bootstrap overrides release owned resources on disposal', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final preferences = await SharedPreferences.getInstance();
+    final database = _MockDatabase();
+    final secureStorage = _MockSecureStorage();
+    final authEventBus = AuthEventBus();
+    final networkMonitor = _MockNetworkMonitor();
+    final syncEngine = _MockSyncEngine();
+    final networkClient = _MockNetworkClient();
+    final imageCacheManager = _MockImageCacheManager();
+    final analyticsService = AnalyticsService(enabled: false);
+    when(() => database.close()).thenAnswer((_) async {});
+    when(() => syncEngine.dispose()).thenAnswer((_) async {});
+    when(() => networkClient.close()).thenReturn(null);
+
+    final container = ProviderContainer(
+      overrides: createCoreProviderOverrides(
+        preferences: preferences,
+        database: database,
+        secureStorage: secureStorage,
+        authEventBus: authEventBus,
+        networkMonitor: networkMonitor,
+        syncEngine: syncEngine,
+        networkClient: networkClient,
+        imageCacheManager: imageCacheManager,
+        analyticsService: analyticsService,
+      ),
+    );
+    container
+      ..read(appDatabaseProvider)
+      ..read(authEventBusProvider)
+      ..read(syncEngineProvider)
+      ..read(networkClientProvider)
+      ..dispose();
+    await Future<void>.delayed(Duration.zero);
+
+    verify(() => database.close()).called(1);
+    verify(() => syncEngine.dispose()).called(1);
+    verify(() => networkClient.close()).called(1);
   });
 }
