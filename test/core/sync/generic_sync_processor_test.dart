@@ -19,10 +19,10 @@ class _BlockingPendingRequestHandler implements PendingRequestHandler {
   int calls = 0;
 
   @override
-  Future<bool> process(Map<String, Object?> request) async {
+  Future<PendingRequestOutcome> process(Map<String, Object?> request) async {
     calls += 1;
     await release.future;
-    return true;
+    return PendingRequestOutcome.success;
   }
 }
 
@@ -70,7 +70,9 @@ void main() {
     when(
       () => queue.toMap(),
     ).thenReturn(<dynamic, dynamic>{'request-1': request});
-    when(() => handler.process(request)).thenAnswer((_) async => true);
+    when(
+      () => handler.process(request),
+    ).thenAnswer((_) async => PendingRequestOutcome.success);
     when(() => queue.delete('request-1')).thenAnswer((_) async {});
 
     final result = await GenericSyncProcessor(
@@ -92,7 +94,9 @@ void main() {
     when(
       () => queue.toMap(),
     ).thenReturn(<dynamic, dynamic>{'request-1': request});
-    when(() => handler.process(request)).thenAnswer((_) async => false);
+    when(
+      () => handler.process(request),
+    ).thenAnswer((_) async => PendingRequestOutcome.retry);
     when(() => queue.put('request-1', any<dynamic>())).thenAnswer((_) async {});
 
     final result = await GenericSyncProcessor(
@@ -183,7 +187,7 @@ void main() {
       'body': <String, Object?>{'value': 1},
     });
 
-    expect(result, isTrue);
+    expect(result, PendingRequestOutcome.success);
     expect(adapter.request?.method, 'PATCH');
     expect(adapter.request?.path, '/generic-resource');
     expect(adapter.request?.headers['Authorization'], isNull);
@@ -204,7 +208,7 @@ void main() {
       },
     );
 
-    expect(result, isFalse);
+    expect(result, PendingRequestOutcome.permanentRejection);
     expect(adapter.request, isNull);
   });
 
@@ -217,7 +221,7 @@ void main() {
       dio,
     ).process(<String, Object?>{'method': 'POST', 'path': '/items'});
 
-    expect(result, isFalse);
+    expect(result, PendingRequestOutcome.permanentRejection);
     expect(adapter.request, isNull);
   });
 
@@ -256,7 +260,9 @@ void main() {
     when(
       () => queue.toMap(),
     ).thenReturn(<dynamic, dynamic>{'request-1': request});
-    when(() => handler.process(request)).thenAnswer((_) async => true);
+    when(
+      () => handler.process(request),
+    ).thenAnswer((_) async => PendingRequestOutcome.success);
     when(
       () => queue.delete('request-1'),
     ).thenThrow(StateError('delete failed'));
@@ -288,12 +294,49 @@ void main() {
           'method': 'POST',
           'path': '/generic-resource',
         }),
-        isFalse,
+        PendingRequestOutcome.permanentRejection,
       );
       expect(
         await handler.process(<String, Object?>{'method': 'POST'}),
-        isFalse,
+        PendingRequestOutcome.permanentRejection,
       );
     },
   );
+
+  test('Dio handler rejects whitespace-only idempotency keys', () async {
+    final adapter = _RecordingAdapter(200);
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.test'))
+      ..httpClientAdapter = adapter;
+
+    final result = await DioPendingRequestHandler(dio).process(
+      <String, Object?>{
+        'method': 'POST',
+        'path': '/items',
+        'headers': <String, Object?>{'Idempotency-Key': '   '},
+      },
+    );
+
+    expect(result, PendingRequestOutcome.permanentRejection);
+    expect(adapter.request, isNull);
+  });
+
+  test('processor deletes a permanently rejected queued request', () async {
+    const request = <String, Object?>{'method': 'GET', 'path': '/resource'};
+    when(
+      () => queue.toMap(),
+    ).thenReturn(<dynamic, dynamic>{'request-1': request});
+    when(
+      () => handler.process(request),
+    ).thenAnswer((_) async => PendingRequestOutcome.permanentRejection);
+    when(() => queue.delete('request-1')).thenAnswer((_) async {});
+
+    final result = await GenericSyncProcessor(
+      pendingRequestsBox: queue,
+      handler: handler,
+    ).processPendingRequests();
+
+    expect(result, isFalse);
+    verify(() => queue.delete('request-1')).called(1);
+    verifyNever(() => queue.put(any<dynamic>(), any<dynamic>()));
+  });
 }

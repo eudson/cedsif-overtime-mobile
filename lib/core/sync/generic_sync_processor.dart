@@ -4,8 +4,10 @@ import 'package:hive/hive.dart';
 import 'package:cedsif_overtime_mobile/core/network/request_origin.dart';
 
 abstract interface class PendingRequestHandler {
-  Future<bool> process(Map<String, Object?> request);
+  Future<PendingRequestOutcome> process(Map<String, Object?> request);
 }
+
+enum PendingRequestOutcome { success, retry, permanentRejection }
 
 class GenericSyncProcessor {
   GenericSyncProcessor({
@@ -50,12 +52,16 @@ class GenericSyncProcessor {
       }
 
       try {
-        final succeeded = await _handler.process(request);
-        if (succeeded) {
-          await _pendingRequestsBox.delete(entry.key);
-        } else {
-          allSucceeded = false;
-          await _markForRetry(entry.key, request);
+        final outcome = await _handler.process(request);
+        switch (outcome) {
+          case PendingRequestOutcome.success:
+            await _pendingRequestsBox.delete(entry.key);
+          case PendingRequestOutcome.retry:
+            allSucceeded = false;
+            await _markForRetry(entry.key, request);
+          case PendingRequestOutcome.permanentRejection:
+            allSucceeded = false;
+            await _pendingRequestsBox.delete(entry.key);
         }
       } on Object {
         allSucceeded = false;
@@ -90,7 +96,7 @@ class GenericSyncProcessor {
       if (entry.key is String &&
           (entry.key as String).toLowerCase() == 'idempotency-key' &&
           entry.value is String &&
-          (entry.value as String).isNotEmpty) {
+          (entry.value as String).trim().isNotEmpty) {
         return true;
       }
     }
@@ -140,14 +146,14 @@ class DioPendingRequestHandler implements PendingRequestHandler {
   };
 
   @override
-  Future<bool> process(Map<String, Object?> request) async {
+  Future<PendingRequestOutcome> process(Map<String, Object?> request) async {
     final method = request['method'];
     final path = request['path'];
     if (method is! String ||
         method.isEmpty ||
         path is! String ||
         path.isEmpty) {
-      return false;
+      return PendingRequestOutcome.permanentRejection;
     }
 
     final headers = _safeHeaders(request['headers']);
@@ -155,7 +161,7 @@ class DioPendingRequestHandler implements PendingRequestHandler {
     if (!RequestOrigin.isAllowedPath(path, _dio.options.baseUrl) ||
         (!_safeMethods.contains(normalizedMethod) &&
             !_hasIdempotencyKey(headers))) {
-      return false;
+      return PendingRequestOutcome.permanentRejection;
     }
     try {
       final response = await _dio.request<dynamic>(
@@ -164,9 +170,11 @@ class DioPendingRequestHandler implements PendingRequestHandler {
         options: Options(method: normalizedMethod, headers: headers),
       );
       final statusCode = response.statusCode;
-      return statusCode != null && statusCode >= 200 && statusCode < 300;
+      return statusCode != null && statusCode >= 200 && statusCode < 300
+          ? PendingRequestOutcome.success
+          : PendingRequestOutcome.retry;
     } on DioException {
-      return false;
+      return PendingRequestOutcome.retry;
     }
   }
 
@@ -176,7 +184,7 @@ class DioPendingRequestHandler implements PendingRequestHandler {
     (entry) =>
         entry.key.toLowerCase() == 'idempotency-key' &&
         entry.value is String &&
-        (entry.value as String).isNotEmpty,
+        (entry.value as String).trim().isNotEmpty,
   );
 
   Map<String, Object?> _safeHeaders(Object? rawHeaders) {

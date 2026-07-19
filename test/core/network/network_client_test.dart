@@ -107,6 +107,28 @@ void main() {
     verifyNever(storage.readAccessToken);
   });
 
+  test(
+    'auth rejects relative path resolved by a cross-origin base URL',
+    () async {
+      final storage = _MockSecureStorage();
+      when(storage.readAccessToken).thenAnswer((_) async => 'access-token');
+      final interceptor = AuthHeaderInterceptor(
+        storage,
+        apiBaseUrl: 'https://api.example.test',
+      );
+      final options = RequestOptions(
+        path: '/items',
+        baseUrl: 'https://attacker.example',
+      );
+      final handler = _RequestHandler();
+
+      await interceptor.onRequest(options, handler);
+
+      expect(options.headers, isNot(contains('Authorization')));
+      verifyNever(storage.readAccessToken);
+    },
+  );
+
   test('debug network logs use AppLogger redaction', () {
     final sink = _RecordingSink();
     AppLogger.setSink(sink);
