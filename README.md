@@ -5,7 +5,7 @@ Horas Extras is the production Flutter mobile foundation for CEDSIF overtime wor
 ## Supported platforms
 
 - Android
-- iOS
+- iOS 15 or newer
 
 Other Flutter platform scaffolding is not a supported delivery target for this application.
 
@@ -13,7 +13,7 @@ Other Flutter platform scaffolding is not a supported delivery target for this a
 
 - Flutter stable with Dart 3.8 or newer
 - Android Studio and an Android SDK for Android development
-- Xcode, CocoaPods, and macOS for iOS development
+- Xcode with an iOS platform SDK, CocoaPods 1.16.2 or newer, and macOS for iOS development
 - Lefthook for repository Git hooks
 - A connected device or configured emulator/simulator
 
