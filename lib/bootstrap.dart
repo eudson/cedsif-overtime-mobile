@@ -62,9 +62,10 @@ Future<void> initializeBackgroundServicesAfterApp({
 }
 
 Widget buildBootstrapRoot(List<Override> overrides) => EasyLocalization(
-  supportedLocales: const <Locale>[Locale('en'), Locale('es')],
+  supportedLocales: const <Locale>[Locale('pt'), Locale('en'), Locale('es')],
   path: 'assets/translations',
-  fallbackLocale: const Locale('en'),
+  fallbackLocale: const Locale('pt'),
+  startLocale: const Locale('pt'),
   child: ProviderScope(
     overrides: overrides,
     observers: const <ProviderObserver>[AppProviderObserver()],

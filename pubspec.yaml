@@ -56,7 +56,23 @@ flutter:
   uses-material-design: true
   assets:
     - assets/translations/
+    - assets/images/
     - assets/launcher_icon.png
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
+    - family: IBM Plex Sans
+      fonts:
+        - asset: assets/fonts/IBMPlexSans-Regular.ttf
+    - family: IBM Plex Mono
+      fonts:
+        - asset: assets/fonts/IBMPlexMono-SemiBold.ttf
+          weight: 600
 
 flutter_launcher_icons:
   android: true

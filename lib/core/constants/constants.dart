@@ -5,6 +5,7 @@ abstract final class AppConstants {
   static const double borderRadius = 12;
   static const double buttonHeight = 48;
   static const double iconSizeLarge = 48;
+  static const int nuitLength = 9;
 
   static const int cacheVersion = 1;
   static const int maxNetworkRetries = 1;
@@ -15,5 +16,7 @@ abstract final class AppConstants {
 
 abstract final class RouteConstants {
   static const String splash = '/splash';
+  static const String login = '/login';
+  static const String facialValidation = '/validacao-facial';
   static const String home = '/home';
 }

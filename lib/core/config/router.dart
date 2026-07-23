@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
+import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/facial_validation_stub_page.dart';
+import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:cedsif_overtime_mobile/features/home/presentation/pages/home_page.dart';
 
 String? appRedirect(BuildContext? context, GoRouterState state) => null;
@@ -17,6 +19,14 @@ GoRouter createAppRouter({String initialLocation = RouteConstants.splash}) =>
         GoRoute(
           path: RouteConstants.splash,
           builder: (context, state) => const SplashPage(),
+        ),
+        GoRoute(
+          path: RouteConstants.login,
+          builder: (context, state) => const LoginPage(),
+        ),
+        GoRoute(
+          path: RouteConstants.facialValidation,
+          builder: (context, state) => const FacialValidationStubPage(),
         ),
         GoRoute(
           path: RouteConstants.home,
@@ -49,7 +59,7 @@ class _SplashPageState extends State<SplashPage> {
 
   void _openHome() {
     if (mounted) {
-      context.go(RouteConstants.home);
+      context.go(RouteConstants.login);
     }
   }
 

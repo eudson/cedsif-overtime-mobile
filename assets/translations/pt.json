@@ -1,0 +1,51 @@
+{
+  "app": {
+    "title": "Portal do FAE",
+    "emblem": "Emblema da República de Moçambique"
+  },
+  "auth": {
+    "subtitle": "Registo de horas extraordinárias",
+    "nuit": "NUIT",
+    "password": "Senha",
+    "enter": "Entrar",
+    "forgotPassword": "Esqueceu a senha?",
+    "required": "Campo obrigatório",
+    "invalidNuit": "Introduza um NUIT válido de 9 dígitos",
+    "facialValidation": "Validação facial",
+    "continue": "Continuar"
+  },
+  "home": {
+    "greeting": "Bom dia,",
+    "name": "Ana M. Cossa",
+    "identity": "NUIT 100234567 · DP Maputo",
+    "insidePerimeter": "No perímetro",
+    "online": "Online",
+    "notStarted": "Ainda não iniciou a contagem de hoje",
+    "start": "Iniciar",
+    "thisMonth": "Este mês",
+    "approvedHours": "Horas aprovadas",
+    "approvedTotal": "18:30"
+  },
+  "navigation": {
+    "home": "Início",
+    "history": "Histórico",
+    "profile": "Perfil",
+    "menu": "Menu"
+  },
+  "status": {
+    "inProgress": "Em curso",
+    "approved": "Aprovada",
+    "pending": "Pendente",
+    "blocked": "Bloqueado",
+    "offline": "Offline"
+  },
+  "common": {
+    "retry": "Tentar novamente",
+    "cancel": "Cancelar"
+  },
+  "errors": {
+    "generic": "Ocorreu um erro. Tente novamente.",
+    "network": "Verifique a ligação e tente novamente.",
+    "sessionExpired": "A sua sessão expirou. Inicie sessão novamente."
+  }
+}

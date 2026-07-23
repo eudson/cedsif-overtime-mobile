@@ -42,7 +42,7 @@ class _PendingHomeRepository implements HomeRepository {
 void main() {
   final binding = _TrackingTestBinding();
 
-  testWidgets('loads once from the widget lifecycle across rebuilds', (
+  testWidgets('does not request backend content for the static design slice', (
     tester,
   ) async {
     final repository = _PendingHomeRepository();
@@ -53,11 +53,11 @@ void main() {
 
     binding.defaultPostFrameCallbackCount = 0;
     await tester.pumpWidget(buildApp());
-    expect(repository.loadCount, 1);
+    expect(repository.loadCount, 0);
     expect(binding.defaultPostFrameCallbackCount, 0);
 
     await tester.pumpWidget(buildApp());
-    expect(repository.loadCount, 1);
+    expect(repository.loadCount, 0);
     expect(binding.defaultPostFrameCallbackCount, 0);
   });
 }

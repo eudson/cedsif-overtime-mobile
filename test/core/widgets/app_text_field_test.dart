@@ -16,7 +16,7 @@ void main() {
     );
 
     expect(find.bySemanticsLabel('Name'), findsAtLeastNWidgets(1));
-    await tester.enterText(find.byType(TextField), 'Ana');
+    await tester.enterText(find.byType(TextFormField), 'Ana');
     expect(value, 'Ana');
   });
 }
