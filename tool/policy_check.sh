@@ -54,6 +54,13 @@ require_no_matches \
   rg --pcre2 -q --glob '*.dart' --glob '!*.g.dart' --glob '!*.freezed.dart' \
   "^[[:space:]]*import[[:space:]]+['\"](?!dart:|package:)" lib
 
+require_no_matches \
+  "Firebase and Sentry integrations are not part of this project" \
+  rg -q \
+  'firebase_core|firebase_analytics|sentry_flutter|FirebaseAnalytics|Firebase\.initializeApp|\bSentry\b|FIREBASE_|SENTRY_DSN|ENABLE_ANALYTICS' \
+  pubspec.yaml .env.example .env.dev .env.prod AGENTS.md CLAUDE.md README.md \
+  lib test android ios
+
 if git log --format=%B | grep -Eqi '^Co-authored-by:'; then
   fail "Co-authored-by trailers are prohibited"
 fi

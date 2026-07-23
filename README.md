@@ -82,13 +82,6 @@ Configuration is read through `EnvironmentConfig` from `--dart-define-from-file`
 | `API_BASE_URL` | Base URL for first-party API requests. Authentication and queued replay are restricted to this origin. |
 | `API_TIMEOUT` | Network timeout in milliseconds. Invalid or non-positive values use the application default. |
 | `ENV` | Runtime profile: `development`, `staging`, or `production`. |
-| `SENTRY_DSN` | Sentry project DSN. Empty disables Sentry initialization. |
-| `ENABLE_ANALYTICS` | Enables analytics only when set to `true` and initialization succeeds. |
-| `FIREBASE_API_KEY` | Firebase API key for the selected project. |
-| `FIREBASE_APP_ID` | Firebase application identifier. |
-| `FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging sender identifier. |
-| `FIREBASE_PROJECT_ID` | Firebase project identifier. |
-| `FIREBASE_STORAGE_BUCKET` | Firebase storage bucket identifier. |
 
 Values passed as Dart defines are embedded in the compiled application and can be recovered from it. Never place passwords, private keys, service-account credentials, access tokens, or other secrets in `.env.dev`, `.env.prod`, the repository, or Dart defines. Runtime credentials belong in secure storage and must come from an approved backend flow.
 
@@ -127,7 +120,7 @@ Layer rules:
 
 ## Runtime services
 
-Firebase, analytics, Sentry, and WorkManager are non-critical bootstrap services. Initialization failures are isolated, safely logged through `AppLogger`, and do not prevent the application shell from starting. Disabled or incomplete configuration degrades to no-op behavior where supported.
+WorkManager is a non-critical bootstrap service. Initialization failures are isolated, safely logged through `AppLogger`, and do not prevent the application shell from starting. Fatal framework and zoned errors are redacted before local logging.
 
 WorkManager processes only generic, network-constrained queued requests. Networking injects secure credentials only for the configured first-party API origin, refreshes an expired session once, isolates cached GET responses by session scope and TTL, and never stores authorization values in cache keys or queued headers.
 

@@ -7,7 +7,7 @@ Production Flutter app: Clean Architecture · Riverpod 3 · GoRouter · Freezed 
 State/DI: flutter_riverpod 3.1 (`Notifier<T>`) · Nav: go_router 17 · HTTP: dio 5 (interceptor chain)
 Models: freezed 3 + json_serializable (codegen) · Errors: `Either<Failure, T>` via fpdart (NOT dartz)
 Storage: Hive (cache) + flutter_secure_storage (secrets) + shared_preferences · i18n: easy_localization (en, es)
-Obs: sentry_flutter + firebase_analytics + AppLogger · Background: workmanager
+Observability: redacted local logging via AppLogger · Background: workmanager
 
 ## Absolute rules — never violate
 1. Never hardcode colors → `AppColors` (`core/constants/app_colors.dart`)
@@ -60,7 +60,7 @@ DI chain: Provider<DataSource> → Provider<Repository> → Provider<UseCase> �
 ## Environment
 Values are build-time only (`--dart-define-from-file`), read via `EnvironmentConfig`. A plain
 `flutter run` boots with empty config and looks broken — always use `make run-dev`/`make run-prod`.
-Copy `.env.example` → `.env.dev`. Keys: API_BASE_URL, API_TIMEOUT, ENV, FIREBASE_*, SENTRY_DSN, ENABLE_ANALYTICS.
+Copy `.env.example` → `.env.dev`. Keys: API_BASE_URL, API_TIMEOUT, ENV.
 
 ## Commands (always run ci-check before committing)
     make setup          # first-time setup
@@ -90,4 +90,3 @@ dart: → package:flutter → third-party → package:cedsif_overtime_mobile/...
 - Redact tokens/PII before logging (`LogRedactor`). No secrets in code or logs.
 - Prefer composition over inheritance; keep `domain/` free of framework/IO concerns for testability.
 - Every change ends green on `make ci-check`; add/adjust tests for logic you touch.
-

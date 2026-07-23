@@ -1,16 +1,31 @@
 import 'dart:async';
 
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
+import 'package:logger/logger.dart';
 
 import 'package:cedsif_overtime_mobile/bootstrap.dart';
-import 'package:cedsif_overtime_mobile/core/utils/analytics_service.dart';
+import 'package:cedsif_overtime_mobile/core/utils/logger.dart';
 
-class _MockFirebaseAnalytics extends Mock implements FirebaseAnalytics {}
+class _RecordingSink implements AppLogSink {
+  Object? error;
+  StackTrace? stackTrace;
+
+  @override
+  void log(
+    Level level,
+    Object? message, {
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    this.error = error;
+    this.stackTrace = stackTrace;
+  }
+}
 
 void main() {
+  tearDown(AppLogger.resetSink);
+
   test('non-critical initialization failures degrade gracefully', () async {
     final result = await runNonCriticalStep<int>(
       'test.step',
@@ -20,58 +35,17 @@ void main() {
     expect(result, isNull);
   });
 
-  test('Sentry is enabled only outside debug with a configured DSN', () {
-    expect(shouldEnableSentry(isDebug: false, dsn: 'https://dsn'), isTrue);
-    expect(shouldEnableSentry(isDebug: true, dsn: 'https://dsn'), isFalse);
-    expect(shouldEnableSentry(isDebug: false, dsn: ''), isFalse);
-  });
-
-  test('fatal reporting redacts errors before external capture', () async {
-    Object? capturedError;
-    StackTrace? capturedStack;
+  test('fatal reporting redacts errors before local logging', () async {
+    final sink = _RecordingSink();
+    AppLogger.setSink(sink);
 
     await reportFatalError(
       StateError('token=private-value'),
       StackTrace.fromString('email=person@example.com'),
-      sentryEnabled: true,
-      captureException: (error, stackTrace) async {
-        capturedError = error;
-        capturedStack = stackTrace;
-      },
     );
 
-    expect(capturedError.toString(), isNot(contains('private-value')));
-    expect(capturedStack.toString(), isNot(contains('person@example.com')));
-  });
-
-  test('app runner is invoked without waiting for Firebase', () async {
-    final firebase = Completer<void>();
-    final analytics = _MockFirebaseAnalytics();
-    when(
-      () => analytics.logEvent(
-        name: any(named: 'name'),
-        parameters: any(named: 'parameters'),
-      ),
-    ).thenAnswer((_) async {});
-    final service = AnalyticsService(enabled: true);
-    var appRan = false;
-    var initializationFinished = false;
-
-    final initialization = initializeFirebaseAfterApp(
-      appRunner: () => appRan = true,
-      initializeFirebase: () => firebase.future,
-      analyticsFactory: () => analytics,
-      analyticsService: service,
-    )..whenComplete(() => initializationFinished = true);
-
-    expect(appRan, isTrue);
-    await Future<void>.delayed(Duration.zero);
-    expect(initializationFinished, isFalse);
-
-    firebase.complete();
-    await initialization;
-    await service.logEvent(name: 'ready');
-    verify(() => analytics.logEvent(name: 'ready')).called(1);
+    expect(sink.error.toString(), isNot(contains('private-value')));
+    expect(sink.stackTrace.toString(), isNot(contains('person@example.com')));
   });
 
   test(
@@ -96,34 +70,4 @@ void main() {
 
     expect(find.byIcon(Icons.error_outline), findsOneWidget);
   });
-
-  test('Firebase failure leaves the running app and analytics safe', () async {
-    final service = AnalyticsService(enabled: true);
-    var appRan = false;
-
-    await initializeFirebaseAfterApp(
-      appRunner: () => appRan = true,
-      initializeFirebase: () async => throw StateError('unavailable'),
-      analyticsFactory: () => _MockFirebaseAnalytics(),
-      analyticsService: service,
-    );
-
-    expect(appRan, isTrue);
-    await expectLater(service.logEvent(name: 'safe-no-op'), completes);
-  });
-
-  test(
-    'Sentry readiness is published as soon as initialization succeeds',
-    () async {
-      final status = BootstrapStatus();
-
-      await initializeSentryStatus(
-        status,
-        enabled: true,
-        initializer: () async {},
-      );
-
-      expect(status.sentryReady, isTrue);
-    },
-  );
 }

@@ -1,18 +1,13 @@
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cedsif_overtime_mobile/app.dart';
-import 'package:cedsif_overtime_mobile/core/config/environment_config.dart';
 import 'package:cedsif_overtime_mobile/core/config/providers.dart';
 import 'package:cedsif_overtime_mobile/core/constants/app_colors.dart';
 import 'package:cedsif_overtime_mobile/core/database/app_database.dart';
@@ -23,21 +18,8 @@ import 'package:cedsif_overtime_mobile/core/storage/image_cache_manager.dart';
 import 'package:cedsif_overtime_mobile/core/storage/secure_storage.dart';
 import 'package:cedsif_overtime_mobile/core/sync/background_sync_worker.dart';
 import 'package:cedsif_overtime_mobile/core/sync/sync_engine.dart';
-import 'package:cedsif_overtime_mobile/core/utils/analytics_service.dart';
 import 'package:cedsif_overtime_mobile/core/utils/log_redactor.dart';
 import 'package:cedsif_overtime_mobile/core/utils/logger.dart';
-
-typedef FatalCapture =
-    Future<void> Function(Object error, StackTrace stackTrace);
-typedef FirebaseInitializer = Future<void> Function();
-typedef AnalyticsFactory = FirebaseAnalytics Function();
-
-final class BootstrapStatus {
-  bool sentryReady = false;
-}
-
-bool shouldEnableSentry({required bool isDebug, required String dsn}) =>
-    !isDebug && dsn.trim().isNotEmpty;
 
 Future<T?> runNonCriticalStep<T>(
   String name,
@@ -55,12 +37,7 @@ Future<T?> runNonCriticalStep<T>(
   }
 }
 
-Future<void> reportFatalError(
-  Object error,
-  StackTrace stackTrace, {
-  required bool sentryEnabled,
-  FatalCapture captureException = _captureWithSentry,
-}) async {
+Future<void> reportFatalError(Object error, StackTrace stackTrace) async {
   final safeError =
       LogRedactor.redactObject(error) ?? LogRedactor.redactedValue;
   final safeStackTrace = StackTrace.fromString(
@@ -70,47 +47,6 @@ Future<void> reportFatalError(
     'Fatal application error',
     error: safeError,
     stackTrace: safeStackTrace,
-  );
-  if (sentryEnabled) {
-    await runNonCriticalStep<void>(
-      'sentry.capture',
-      () => captureException(safeError, safeStackTrace),
-    );
-  }
-}
-
-Future<void> _captureWithSentry(Object error, StackTrace stackTrace) async {
-  await Sentry.captureException(error, stackTrace: stackTrace);
-}
-
-Future<void> initializeSentryStatus(
-  BootstrapStatus status, {
-  required bool enabled,
-  required Future<void> Function() initializer,
-}) async {
-  if (!enabled) {
-    return;
-  }
-  final initialized =
-      await runNonCriticalStep<bool>('sentry.initialize', () async {
-        await initializer();
-        return true;
-      }) ??
-      false;
-  status.sentryReady = initialized;
-}
-
-Future<void> initializeFirebaseAfterApp({
-  required VoidCallback appRunner,
-  required FirebaseInitializer initializeFirebase,
-  required AnalyticsFactory analyticsFactory,
-  required AnalyticsService analyticsService,
-}) {
-  appRunner();
-  return _initializeFirebaseAndAnalytics(
-    initializeFirebase: initializeFirebase,
-    analyticsFactory: analyticsFactory,
-    analyticsService: analyticsService,
   );
 }
 
@@ -123,29 +59,6 @@ Future<void> initializeBackgroundServicesAfterApp({
     'background_services',
     initializeBackgroundServices,
   );
-}
-
-Future<void> _initializeFirebaseAndAnalytics({
-  required FirebaseInitializer initializeFirebase,
-  required AnalyticsFactory analyticsFactory,
-  required AnalyticsService analyticsService,
-}) async {
-  final initialized =
-      await runNonCriticalStep<bool>('firebase', () async {
-        await initializeFirebase();
-        return true;
-      }) ??
-      false;
-  if (!initialized || !analyticsService.enabled) {
-    return;
-  }
-  final analytics = await runNonCriticalStep<FirebaseAnalytics>(
-    'firebase_analytics',
-    () async => analyticsFactory(),
-  );
-  if (analytics != null) {
-    analyticsService.attach(analytics);
-  }
 }
 
 Widget buildBootstrapRoot(List<Override> overrides) => EasyLocalization(
@@ -169,21 +82,12 @@ Widget buildBootstrapFallbackRoot() => const MaterialApp(
 );
 
 void bootstrap() {
-  final status = BootstrapStatus();
-  runZonedGuarded(
-    () async {
-      await initializeApplication(status: status);
-    },
-    (error, stackTrace) {
-      unawaited(
-        reportFatalError(error, stackTrace, sentryEnabled: status.sentryReady),
-      );
-    },
-  );
+  runZonedGuarded(initializeApplication, (error, stackTrace) {
+    unawaited(reportFatalError(error, stackTrace));
+  });
 }
 
-Future<bool> initializeApplication({BootstrapStatus? status}) async {
-  final bootstrapStatus = status ?? BootstrapStatus();
+Future<void> initializeApplication() async {
   WidgetsFlutterBinding.ensureInitialized();
   final localizationReady =
       await runNonCriticalStep<bool>('localization', () async {
@@ -193,7 +97,7 @@ Future<bool> initializeApplication({BootstrapStatus? status}) async {
       false;
   if (!localizationReady) {
     runApp(buildBootstrapFallbackRoot());
-    return bootstrapStatus.sentryReady;
+    return;
   }
   await runNonCriticalStep<void>('system_ui', () async {
     SystemChrome.setSystemUIOverlayStyle(
@@ -201,26 +105,9 @@ Future<bool> initializeApplication({BootstrapStatus? status}) async {
     );
   });
 
-  final sentryEnabled = shouldEnableSentry(
-    isDebug: kDebugMode,
-    dsn: EnvironmentConfig.sentryDsn,
-  );
-  await initializeSentryStatus(
-    bootstrapStatus,
-    enabled: sentryEnabled,
-    initializer: () => SentryFlutter.init((options) {
-      options.dsn = EnvironmentConfig.sentryDsn;
-      options.environment = EnvironmentConfig.environment.name;
-    }),
-  );
-
   FlutterError.onError = (details) {
     unawaited(
-      reportFatalError(
-        details.exception,
-        details.stack ?? StackTrace.current,
-        sentryEnabled: bootstrapStatus.sentryReady,
-      ),
+      reportFatalError(details.exception, details.stack ?? StackTrace.current),
     );
   };
 
@@ -235,7 +122,7 @@ Future<bool> initializeApplication({BootstrapStatus? status}) async {
   if (database == null || preferences == null) {
     await database?.close();
     runApp(buildBootstrapFallbackRoot());
-    return bootstrapStatus.sentryReady;
+    return;
   }
   final secureStorage = const SecureStorage();
   final authEventBus = AuthEventBus();
@@ -251,9 +138,6 @@ Future<bool> initializeApplication({BootstrapStatus? status}) async {
     initiallyOnline: initiallyOnline,
   );
   final imageCacheManager = ImageCacheManager.shared;
-  final analyticsService = AnalyticsService(
-    enabled: EnvironmentConfig.enableAnalytics,
-  );
 
   final networkClient = NetworkClient.create(
     secureStorage: secureStorage,
@@ -270,7 +154,6 @@ Future<bool> initializeApplication({BootstrapStatus? status}) async {
     syncEngine: syncEngine,
     networkClient: networkClient,
     imageCacheManager: imageCacheManager,
-    analyticsService: analyticsService,
   );
 
   void appRunner() => runApp(buildBootstrapRoot(overrides));
@@ -283,36 +166,5 @@ Future<bool> initializeApplication({BootstrapStatus? status}) async {
         await worker.registerPeriodicSync();
       },
     ),
-  );
-
-  unawaited(
-    initializeFirebaseAfterApp(
-      appRunner: () {},
-      initializeFirebase: _initializeFirebase,
-      analyticsFactory: () => FirebaseAnalytics.instance,
-      analyticsService: analyticsService,
-    ),
-  );
-  return bootstrapStatus.sentryReady;
-}
-
-Future<void> _initializeFirebase() async {
-  final hasDartDefineOptions =
-      EnvironmentConfig.firebaseApiKey.isNotEmpty &&
-      EnvironmentConfig.firebaseAppId.isNotEmpty &&
-      EnvironmentConfig.firebaseMessagingSenderId.isNotEmpty &&
-      EnvironmentConfig.firebaseProjectId.isNotEmpty;
-  await Firebase.initializeApp(
-    options: hasDartDefineOptions
-        ? FirebaseOptions(
-            apiKey: EnvironmentConfig.firebaseApiKey,
-            appId: EnvironmentConfig.firebaseAppId,
-            messagingSenderId: EnvironmentConfig.firebaseMessagingSenderId,
-            projectId: EnvironmentConfig.firebaseProjectId,
-            storageBucket: EnvironmentConfig.firebaseStorageBucket.isEmpty
-                ? null
-                : EnvironmentConfig.firebaseStorageBucket,
-          )
-        : null,
   );
 }

@@ -34,12 +34,5 @@ void main() {
         AppConstants.defaultApiTimeout,
       );
     });
-
-    test('parses only explicit true values as enabled', () {
-      expect(EnvironmentConfig.parseBool('true'), isTrue);
-      expect(EnvironmentConfig.parseBool('TRUE'), isTrue);
-      expect(EnvironmentConfig.parseBool('false'), isFalse);
-      expect(EnvironmentConfig.parseBool('1'), isFalse);
-    });
   });
 }

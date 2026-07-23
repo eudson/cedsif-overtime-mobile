@@ -15,7 +15,6 @@ import 'package:cedsif_overtime_mobile/core/storage/image_cache_manager.dart';
 import 'package:cedsif_overtime_mobile/core/storage/local_storage.dart';
 import 'package:cedsif_overtime_mobile/core/storage/secure_storage.dart';
 import 'package:cedsif_overtime_mobile/core/sync/sync_engine.dart';
-import 'package:cedsif_overtime_mobile/core/utils/analytics_service.dart';
 import 'package:cedsif_overtime_mobile/core/utils/logger.dart';
 
 Never _missingBootstrapResource(String name) =>
@@ -69,10 +68,6 @@ final imageCacheManagerProvider = Provider<ImageCacheManager>(
   (ref) => _missingBootstrapResource('ImageCacheManager'),
 );
 
-final analyticsServiceProvider = Provider<AnalyticsService>(
-  (ref) => _missingBootstrapResource('AnalyticsService'),
-);
-
 List<Override> createCoreProviderOverrides({
   required SharedPreferences preferences,
   required AppDatabase database,
@@ -82,7 +77,6 @@ List<Override> createCoreProviderOverrides({
   required SyncEngine syncEngine,
   required NetworkClient networkClient,
   required ImageCacheManager imageCacheManager,
-  required AnalyticsService analyticsService,
 }) => <Override>[
   sharedPreferencesProvider.overrideWithValue(preferences),
   appDatabaseProvider.overrideWith((ref) {
@@ -104,7 +98,6 @@ List<Override> createCoreProviderOverrides({
     return networkClient;
   }),
   imageCacheManagerProvider.overrideWithValue(imageCacheManager),
-  analyticsServiceProvider.overrideWithValue(analyticsService),
 ];
 
 class CoreResourceOwner extends ConsumerWidget {

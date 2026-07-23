@@ -13,7 +13,6 @@ import 'package:cedsif_overtime_mobile/core/network/network_monitor.dart';
 import 'package:cedsif_overtime_mobile/core/storage/image_cache_manager.dart';
 import 'package:cedsif_overtime_mobile/core/storage/secure_storage.dart';
 import 'package:cedsif_overtime_mobile/core/sync/sync_engine.dart';
-import 'package:cedsif_overtime_mobile/core/utils/analytics_service.dart';
 
 class _MockDatabase extends Mock implements AppDatabase {}
 
@@ -40,7 +39,6 @@ void main() {
       syncEngineProvider,
       networkClientProvider,
       imageCacheManagerProvider,
-      analyticsServiceProvider,
     ];
 
     for (final provider in providers) {
@@ -77,7 +75,6 @@ void main() {
     );
     final networkClient = _MockNetworkClient();
     final imageCacheManager = _MockImageCacheManager();
-    final analyticsService = AnalyticsService(enabled: false);
     when(() => database.close()).thenAnswer((_) async {});
     when(() => networkClient.close()).thenReturn(null);
     final container = ProviderContainer(
@@ -90,7 +87,6 @@ void main() {
         syncEngine: syncEngine,
         networkClient: networkClient,
         imageCacheManager: imageCacheManager,
-        analyticsService: analyticsService,
       ),
     );
     addTearDown(container.dispose);
@@ -106,7 +102,6 @@ void main() {
     expect(container.read(syncEngineProvider), same(syncEngine));
     expect(container.read(networkClientProvider), same(networkClient));
     expect(container.read(imageCacheManagerProvider), same(imageCacheManager));
-    expect(container.read(analyticsServiceProvider), same(analyticsService));
   });
 
   test('bootstrap overrides release owned resources on disposal', () async {
@@ -119,7 +114,6 @@ void main() {
     final syncEngine = _MockSyncEngine();
     final networkClient = _MockNetworkClient();
     final imageCacheManager = _MockImageCacheManager();
-    final analyticsService = AnalyticsService(enabled: false);
     when(() => database.close()).thenAnswer((_) async {});
     when(() => syncEngine.dispose()).thenAnswer((_) async {});
     when(() => networkClient.close()).thenReturn(null);
@@ -134,7 +128,6 @@ void main() {
         syncEngine: syncEngine,
         networkClient: networkClient,
         imageCacheManager: imageCacheManager,
-        analyticsService: analyticsService,
       ),
     );
     container
