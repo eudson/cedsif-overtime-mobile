@@ -130,6 +130,15 @@ The current home feature is a neutral architecture proof that renders localized 
 
 This repository also excludes unrelated product domains such as payments, point-of-sale, checkout, inventory, ecommerce, banking, lending, and accounting. Business behavior will be introduced only from approved CEDSIF requirements.
 
+## Pending release setup
+
+The generic application bootstrap is complete. The following external release and product inputs are still required:
+
+- [ ] Install or repair the iOS 26.2 platform component in the active Xcode installation, then verify `make build-ios`.
+- [ ] Configure Android production signing through the approved secure release pipeline; local release builds currently use debug signing.
+- [ ] Replace the placeholder `API_BASE_URL` in the target environment files after the backend endpoint is approved.
+- [ ] Implement overtime workflows only after CEDSIF supplies and approves the business requirements.
+
 ## Repository policy
 
 Run the policy guard directly when changing project conventions:
