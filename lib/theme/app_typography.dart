@@ -91,4 +91,11 @@ abstract final class AppTypography {
     fontWeight: FontWeight.w600,
     height: 1.1,
   );
+  static const TextStyle historyTime = TextStyle(
+    color: AppColors.textMuted,
+    fontFamily: numericFontFamily,
+    fontSize: 15,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+  );
 }

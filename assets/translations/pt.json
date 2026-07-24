@@ -26,6 +26,9 @@
     "approvedHours": "Horas aprovadas",
     "approvedTotal": "18:30"
   },
+  "history": {
+    "title": "Histórico"
+  },
   "navigation": {
     "home": "Início",
     "history": "Histórico",

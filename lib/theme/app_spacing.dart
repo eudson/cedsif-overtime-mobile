@@ -38,6 +38,8 @@ abstract final class AppSpacing {
   static const double homeStartSize = 190;
   static const double homePromptMaxWidth = 280;
   static const double homeSummaryMinHeight = 96;
+  static const double historyCardMinHeight = 96;
+  static const double historyCardRowBreakpoint = 320;
   static const double elevationHero = 12;
 
   static const Duration loginLoadingDuration = Duration(milliseconds: 450);
