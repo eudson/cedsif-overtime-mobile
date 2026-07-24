@@ -45,7 +45,11 @@ void main() {
     await EasyLocalization.ensureInitialized();
   });
 
-  Future<void> pumpHome(WidgetTester tester, {VoidCallback? onStart}) async {
+  Future<void> pumpHome(
+    WidgetTester tester, {
+    VoidCallback? onStart,
+    VoidCallback? onHistorySelected,
+  }) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -65,7 +69,10 @@ void main() {
             locale: context.locale,
             supportedLocales: context.supportedLocales,
             localizationsDelegates: context.localizationDelegates,
-            home: HomePage(onStart: onStart),
+            home: HomePage(
+              onStart: onStart,
+              onHistorySelected: onHistorySelected,
+            ),
           ),
         ),
       ),
@@ -91,17 +98,21 @@ void main() {
     expect(find.text('18:30'), findsOneWidget);
   });
 
-  testWidgets('renders contextual bottom navigation without changing tabs', (
+  testWidgets('History destination invokes its navigation hook', (
     tester,
   ) async {
-    await pumpHome(tester);
+    var historySelections = 0;
+    await pumpHome(tester, onHistorySelected: () => historySelections++);
 
     expect(find.text('Início'), findsOneWidget);
     expect(find.text('Histórico'), findsOneWidget);
     expect(find.text('Perfil'), findsOneWidget);
     await tester.tap(find.text('Histórico'));
+    expect(historySelections, 1);
+
     await tester.tap(find.text('Perfil'));
     await tester.pump();
+    expect(historySelections, 1);
     expect(find.text('Ana M. Cossa'), findsOneWidget);
   });
 

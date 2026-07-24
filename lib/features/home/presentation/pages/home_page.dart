@@ -7,9 +7,10 @@ import 'package:cedsif_overtime_mobile/theme/app_typography.dart';
 import 'package:cedsif_overtime_mobile/widgets/app_scaffold.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({this.onStart, super.key});
+  const HomePage({this.onStart, this.onHistorySelected, super.key});
 
   final VoidCallback? onStart;
+  final VoidCallback? onHistorySelected;
 
   @override
   Widget build(BuildContext context) => AppScaffold(
@@ -17,7 +18,11 @@ class HomePage extends StatelessWidget {
     showBottomNavigation: true,
     currentIndex: 0,
     onMenuPressed: () {},
-    onDestinationSelected: (_) {},
+    onDestinationSelected: (index) {
+      if (index == 1) {
+        onHistorySelected?.call();
+      }
+    },
     backgroundColor: AppColors.surfaceAlternative,
     body: SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(

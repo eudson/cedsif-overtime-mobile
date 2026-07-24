@@ -8,6 +8,7 @@ import 'package:cedsif_overtime_mobile/core/config/router.dart';
 import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/facial_validation_stub_page.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/login_page.dart';
+import 'package:cedsif_overtime_mobile/features/history/presentation/pages/history_page.dart';
 import 'package:cedsif_overtime_mobile/features/home/presentation/pages/home_page.dart';
 import 'package:cedsif_overtime_mobile/widgets/app_button.dart';
 
@@ -50,6 +51,10 @@ void main() {
     router.go(RouteConstants.home);
     await tester.pumpAndSettle();
     expect(find.byType(HomePage), findsOneWidget);
+
+    router.go(RouteConstants.history);
+    await tester.pumpAndSettle();
+    expect(find.byType(HistoryPage), findsOneWidget);
   });
 
   testWidgets('facial-validation Continue action opens Home', (tester) async {
@@ -68,6 +73,27 @@ void main() {
     await tester.tap(find.byType(AppButton));
     await tester.pumpAndSettle();
 
+    expect(router.state.uri.path, RouteConstants.home);
+    expect(find.byType(HomePage), findsOneWidget);
+  });
+
+  testWidgets('bottom navigation moves between Home and History', (
+    tester,
+  ) async {
+    final router = createAppRouter(initialLocation: RouteConstants.home);
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(child: MaterialApp.router(routerConfig: router)),
+    );
+
+    await tester.tap(find.text('navigation.history'));
+    await tester.pumpAndSettle();
+    expect(router.state.uri.path, RouteConstants.history);
+    expect(find.byType(HistoryPage), findsOneWidget);
+
+    await tester.tap(find.text('navigation.home'));
+    await tester.pumpAndSettle();
     expect(router.state.uri.path, RouteConstants.home);
     expect(find.byType(HomePage), findsOneWidget);
   });
