@@ -1,9 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:cedsif_overtime_mobile/theme/app_colors.dart';
 import 'package:cedsif_overtime_mobile/theme/app_spacing.dart';
+import 'package:cedsif_overtime_mobile/theme/app_theme.dart';
 import 'package:cedsif_overtime_mobile/theme/app_typography.dart';
 
 class AppScaffold extends StatelessWidget {
@@ -27,44 +29,56 @@ class AppScaffold extends StatelessWidget {
   final Color backgroundColor;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: backgroundColor,
-    body: SafeArea(
-      bottom: !showBottomNavigation,
-      child: Column(
-        children: [
-          if (showTopBar)
-            _PortalTopBar(onMenuPressed: onMenuPressed)
-          else
-            const SizedBox.shrink(),
-          Expanded(child: body),
-        ],
-      ),
-    ),
-    bottomNavigationBar: showBottomNavigation
-        ? SafeArea(
-            top: false,
-            child: NavigationBar(
-              selectedIndex: currentIndex,
-              onDestinationSelected: onDestinationSelected,
-              destinations: [
-                NavigationDestination(
-                  icon: const Icon(Icons.home_outlined),
-                  selectedIcon: const Icon(Icons.home_rounded),
-                  label: 'navigation.home'.tr(),
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.history_rounded),
-                  label: 'navigation.history'.tr(),
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.person_outline_rounded),
-                  label: 'navigation.profile'.tr(),
-                ),
+  Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
+    value: AppTheme.systemUiOverlayStyle,
+    child: Scaffold(
+      backgroundColor: backgroundColor,
+      body: ColoredBox(
+        color: AppColors.canvas,
+        child: SafeArea(
+          bottom: !showBottomNavigation,
+          child: ColoredBox(
+            color: backgroundColor,
+            child: Column(
+              children: [
+                if (showTopBar)
+                  _PortalTopBar(onMenuPressed: onMenuPressed)
+                else
+                  const SizedBox.shrink(),
+                Expanded(child: body),
               ],
             ),
-          )
-        : null,
+          ),
+        ),
+      ),
+      bottomNavigationBar: showBottomNavigation
+          ? ColoredBox(
+              color: AppColors.canvas,
+              child: SafeArea(
+                top: false,
+                child: NavigationBar(
+                  selectedIndex: currentIndex,
+                  onDestinationSelected: onDestinationSelected,
+                  destinations: [
+                    NavigationDestination(
+                      icon: const Icon(Icons.home_outlined),
+                      selectedIcon: const Icon(Icons.home_rounded),
+                      label: 'navigation.home'.tr(),
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.history_rounded),
+                      label: 'navigation.history'.tr(),
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.person_outline_rounded),
+                      label: 'navigation.profile'.tr(),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : null,
+    ),
   );
 }
 

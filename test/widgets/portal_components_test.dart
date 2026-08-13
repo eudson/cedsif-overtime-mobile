@@ -1,9 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cedsif_overtime_mobile/theme/app_colors.dart';
 import 'package:cedsif_overtime_mobile/theme/app_spacing.dart';
 import 'package:cedsif_overtime_mobile/theme/app_theme.dart';
 import 'package:cedsif_overtime_mobile/widgets/app_button.dart';
@@ -209,6 +211,25 @@ void main() {
       tester.getSize(find.byTooltip('Menu')).height,
       greaterThanOrEqualTo(AppSpacing.touchTarget),
     );
+
+    final systemStyle = tester
+        .widget<AnnotatedRegion<SystemUiOverlayStyle>>(
+          find.byType(AnnotatedRegion<SystemUiOverlayStyle>),
+        )
+        .value;
+    expect(systemStyle.statusBarColor, AppColors.canvas);
+    expect(systemStyle.systemNavigationBarColor, AppColors.canvas);
+    expect(systemStyle.statusBarIconBrightness, Brightness.dark);
+    expect(systemStyle.systemNavigationBarIconBrightness, Brightness.dark);
+
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).last);
+    final bodyBackground = scaffold.body! as ColoredBox;
+    expect(bodyBackground.color, AppColors.canvas);
+
+    final navigationBar = tester.element(find.byType(NavigationBar));
+    final navigationInsetBackground = navigationBar
+        .findAncestorWidgetOfExactType<ColoredBox>();
+    expect(navigationInsetBackground?.color, AppColors.canvas);
 
     await tester.tap(find.byTooltip('Menu'));
     expect(menuPressed, isTrue);

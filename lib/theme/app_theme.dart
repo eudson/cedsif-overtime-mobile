@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:cedsif_overtime_mobile/theme/app_colors.dart';
 import 'package:cedsif_overtime_mobile/theme/app_spacing.dart';
@@ -7,6 +8,14 @@ import 'package:cedsif_overtime_mobile/theme/app_typography.dart';
 abstract final class AppTheme {
   static final ThemeData light = lightFor();
   static final ThemeData dark = darkFor();
+  static const SystemUiOverlayStyle systemUiOverlayStyle = SystemUiOverlayStyle(
+    statusBarColor: AppColors.canvas,
+    statusBarIconBrightness: Brightness.dark,
+    statusBarBrightness: Brightness.light,
+    systemNavigationBarColor: AppColors.canvas,
+    systemNavigationBarDividerColor: AppColors.canvas,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  );
 
   static ThemeData lightFor({
     Color primary = AppColors.primary,

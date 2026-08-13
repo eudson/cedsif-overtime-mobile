@@ -20,6 +20,7 @@ import 'package:cedsif_overtime_mobile/core/sync/background_sync_worker.dart';
 import 'package:cedsif_overtime_mobile/core/sync/sync_engine.dart';
 import 'package:cedsif_overtime_mobile/core/utils/log_redactor.dart';
 import 'package:cedsif_overtime_mobile/core/utils/logger.dart';
+import 'package:cedsif_overtime_mobile/theme/app_theme.dart';
 
 Future<T?> runNonCriticalStep<T>(
   String name,
@@ -101,9 +102,7 @@ Future<void> initializeApplication() async {
     return;
   }
   await runNonCriticalStep<void>('system_ui', () async {
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(statusBarColor: AppColors.primary),
-    );
+    SystemChrome.setSystemUIOverlayStyle(AppTheme.systemUiOverlayStyle);
   });
 
   FlutterError.onError = (details) {
