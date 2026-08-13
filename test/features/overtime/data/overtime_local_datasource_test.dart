@@ -56,11 +56,31 @@ void main() {
         'startedAt': '2026-08-13T08:24:00.000',
         'endedAt': null,
         'status': 'active',
+        'pausedDurationSeconds': 0,
       }),
     ).called(1);
     verify(
       () => box.delete(OvertimeLocalDataSource.activeSessionKey),
     ).called(1);
+  });
+
+  test('restores a reviewing session and its accumulated pause time', () async {
+    when(() => box.get(OvertimeLocalDataSource.activeSessionKey)).thenReturn({
+      'id': 'reviewing-1',
+      'startedAt': '2026-08-13T08:24:00.000',
+      'endedAt': '2026-08-13T09:24:00.000',
+      'status': 'reviewing',
+      'pausedDurationSeconds': 900,
+    });
+
+    final session = await dataSource.loadActiveSession();
+
+    expect(session?.status, OvertimeSessionStatus.reviewing);
+    expect(session?.pausedDuration, const Duration(minutes: 15));
+    expect(
+      session?.durationAt(DateTime(2026, 8, 13, 12)),
+      const Duration(minutes: 45),
+    );
   });
 
   test('seeds reference history once and keeps newest records first', () async {

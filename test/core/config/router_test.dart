@@ -38,8 +38,20 @@ class _MemoryOvertimeRepository implements OvertimeRepository {
   }
 
   @override
-  Future<Either<Failure, OvertimeSnapshot>> stop(DateTime endedAt) async {
-    history.insert(0, active!.completeAt(endedAt));
+  Future<Either<Failure, OvertimeSession>> pause(DateTime pausedAt) async {
+    active = active!.pauseAt(pausedAt);
+    return Right(active!);
+  }
+
+  @override
+  Future<Either<Failure, OvertimeSession>> resume(DateTime resumedAt) async {
+    active = active!.resumeAt(resumedAt);
+    return Right(active!);
+  }
+
+  @override
+  Future<Either<Failure, OvertimeSnapshot>> submit() async {
+    history.insert(0, active!.submit());
     active = null;
     return Right(OvertimeSnapshot(history: List.of(history)));
   }
@@ -142,7 +154,7 @@ void main() {
     expect(find.byType(HomePage), findsOneWidget);
   });
 
-  testWidgets('start and stop persist a pending entry in History', (
+  testWidgets('stop opens review and submit persists a pending History entry', (
     tester,
   ) async {
     final repository = _MemoryOvertimeRepository();
@@ -164,6 +176,11 @@ void main() {
 
     await tester.tap(find.text('home.stop'));
     await tester.pump();
+    expect(find.text('overtimeReview.title'), findsOneWidget);
+    expect(repository.history, isEmpty);
+
+    await tester.tap(find.text('overtimeReview.submit'));
+    await tester.pump();
     expect(repository.history, hasLength(1));
     expect(repository.history.single.status, OvertimeSessionStatus.pending);
 
@@ -174,5 +191,56 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('10:00 → 10:00 · 00:00'), findsOneWidget);
+  });
+
+  testWidgets('review can resume the same counting session', (tester) async {
+    final repository = _MemoryOvertimeRepository();
+    final router = createAppRouter(initialLocation: RouteConstants.home);
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      _testScope(
+        MaterialApp.router(routerConfig: router),
+        repository: repository,
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('home-start-button')));
+    await tester.pump();
+    await tester.tap(find.text('home.stop'));
+    await tester.pump();
+
+    await tester.tap(find.text('overtimeReview.resume'));
+    await tester.pump();
+
+    expect(find.text('home.stop'), findsOneWidget);
+    expect(repository.active?.status, OvertimeSessionStatus.active);
+    expect(repository.history, isEmpty);
+  });
+
+  testWidgets('restores a persisted review session after rebuilding Home', (
+    tester,
+  ) async {
+    final repository = _MemoryOvertimeRepository()
+      ..active = OvertimeSession(
+        id: 'persisted-review',
+        startedAt: DateTime(2026, 8, 13, 9),
+        endedAt: DateTime(2026, 8, 13, 10),
+        status: OvertimeSessionStatus.reviewing,
+      );
+    final router = createAppRouter(initialLocation: RouteConstants.home);
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      _testScope(
+        MaterialApp.router(routerConfig: router),
+        repository: repository,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('overtimeReview.title'), findsOneWidget);
+    expect(find.text('overtimeReview.submit'), findsOneWidget);
+    expect(find.text('overtimeReview.resume'), findsOneWidget);
   });
 }

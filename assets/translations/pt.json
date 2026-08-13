@@ -36,6 +36,15 @@
   "history": {
     "title": "Histórico"
   },
+  "overtimeReview": {
+    "title": "Contagem terminada",
+    "subtitle": "Reveja e envie ao e-SNGRHE.",
+    "start": "Início",
+    "end": "Encerramento",
+    "registeredTime": "Tempo registado",
+    "submit": "Enviar ao e-SNGRHE",
+    "resume": "Retomar contagem"
+  },
   "navigation": {
     "home": "Início",
     "history": "Histórico",

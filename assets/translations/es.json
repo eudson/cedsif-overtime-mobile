@@ -5,6 +5,15 @@
   "home": {
     "placeholder": "Inicio"
   },
+  "overtimeReview": {
+    "title": "Conteo terminado",
+    "subtitle": "Revise y envíe a e-SNGRHE.",
+    "start": "Inicio",
+    "end": "Finalización",
+    "registeredTime": "Tiempo registrado",
+    "submit": "Enviar a e-SNGRHE",
+    "resume": "Reanudar conteo"
+  },
   "common": {
     "retry": "Reintentar",
     "cancel": "Cancelar"

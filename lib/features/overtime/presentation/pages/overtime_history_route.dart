@@ -52,6 +52,7 @@ class _OvertimeHistoryRouteState extends ConsumerState<OvertimeHistoryRoute> {
       duration: _formatDuration(session.durationAt(endedAt)),
       status: switch (session.status) {
         OvertimeSessionStatus.active => AppStatus.emCurso,
+        OvertimeSessionStatus.reviewing => AppStatus.emCurso,
         OvertimeSessionStatus.pending => AppStatus.pendente,
         OvertimeSessionStatus.approved => AppStatus.aprovada,
       },

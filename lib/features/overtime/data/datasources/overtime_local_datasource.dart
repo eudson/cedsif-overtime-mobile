@@ -46,6 +46,7 @@ class OvertimeLocalDataSource {
     'startedAt': session.startedAt.toIso8601String(),
     'endedAt': session.endedAt?.toIso8601String(),
     'status': session.status.name,
+    'pausedDurationSeconds': session.pausedDuration.inSeconds,
   };
 
   static OvertimeSession _decode(dynamic value) {
@@ -57,6 +58,9 @@ class OvertimeLocalDataSource {
           ? null
           : DateTime.parse(map['endedAt'] as String),
       status: OvertimeSessionStatus.values.byName(map['status'] as String),
+      pausedDuration: Duration(
+        seconds: (map['pausedDurationSeconds'] as num?)?.toInt() ?? 0,
+      ),
     );
   }
 

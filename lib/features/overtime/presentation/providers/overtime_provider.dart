@@ -37,7 +37,10 @@ class OvertimeState {
   final DateTime? now;
   final String? errorKey;
 
-  bool get isRunning => activeSession != null;
+  bool get isRunning => activeSession?.status == OvertimeSessionStatus.active;
+
+  bool get isReviewing =>
+      activeSession?.status == OvertimeSessionStatus.reviewing;
 
   Duration get elapsed {
     final active = activeSession;
@@ -91,7 +94,7 @@ class OvertimeNotifier extends Notifier<OvertimeState> {
           history: snapshot.history,
           now: ref.read(overtimeClockProvider)(),
         );
-        if (snapshot.activeSession != null) {
+        if (snapshot.activeSession?.status == OvertimeSessionStatus.active) {
           _startTicker();
         }
       },
@@ -99,7 +102,7 @@ class OvertimeNotifier extends Notifier<OvertimeState> {
   }
 
   Future<void> start() async {
-    if (!state.isLoaded || state.isSaving || state.isRunning) {
+    if (!state.isLoaded || state.isSaving || state.activeSession != null) {
       return;
     }
     final now = ref.read(overtimeClockProvider)();
@@ -120,13 +123,54 @@ class OvertimeNotifier extends Notifier<OvertimeState> {
     );
   }
 
-  Future<void> stop() async {
+  Future<void> pause() async {
     if (state.isSaving || !state.isRunning) {
       return;
     }
     final now = ref.read(overtimeClockProvider)();
     state = state.copyWith(isSaving: true, errorKey: null, now: now);
-    final result = await ref.read(overtimeRepositoryProvider).stop(now);
+    final result = await ref.read(overtimeRepositoryProvider).pause(now);
+    result.fold(
+      (failure) =>
+          state = state.copyWith(isSaving: false, errorKey: failure.message),
+      (session) {
+        _ticker?.cancel();
+        state = state.copyWith(
+          isSaving: false,
+          activeSession: session,
+          now: now,
+        );
+      },
+    );
+  }
+
+  Future<void> resume() async {
+    if (state.isSaving || !state.isReviewing) {
+      return;
+    }
+    final now = ref.read(overtimeClockProvider)();
+    state = state.copyWith(isSaving: true, errorKey: null, now: now);
+    final result = await ref.read(overtimeRepositoryProvider).resume(now);
+    result.fold(
+      (failure) =>
+          state = state.copyWith(isSaving: false, errorKey: failure.message),
+      (session) {
+        state = state.copyWith(
+          isSaving: false,
+          activeSession: session,
+          now: now,
+        );
+        _startTicker();
+      },
+    );
+  }
+
+  Future<void> submit() async {
+    if (state.isSaving || !state.isReviewing) {
+      return;
+    }
+    state = state.copyWith(isSaving: true, errorKey: null);
+    final result = await ref.read(overtimeRepositoryProvider).submit();
     result.fold(
       (failure) =>
           state = state.copyWith(isSaving: false, errorKey: failure.message),
@@ -135,7 +179,7 @@ class OvertimeNotifier extends Notifier<OvertimeState> {
         state = OvertimeState(
           isLoaded: true,
           history: snapshot.history,
-          now: now,
+          now: state.now,
         );
       },
     );

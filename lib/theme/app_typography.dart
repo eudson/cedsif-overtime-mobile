@@ -98,4 +98,11 @@ abstract final class AppTypography {
     fontWeight: FontWeight.w600,
     height: 1.3,
   );
+  static const TextStyle reviewTime = TextStyle(
+    color: AppColors.textStrong,
+    fontFamily: numericFontFamily,
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    height: 1.2,
+  );
 }

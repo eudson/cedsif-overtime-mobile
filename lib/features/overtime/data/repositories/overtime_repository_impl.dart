@@ -44,15 +44,45 @@ class OvertimeRepositoryImpl implements OvertimeRepository {
   }
 
   @override
-  Future<Either<Failure, OvertimeSnapshot>> stop(DateTime endedAt) async {
+  Future<Either<Failure, OvertimeSession>> pause(DateTime pausedAt) async {
     try {
       final active = await _dataSource.loadActiveSession();
       if (active == null) {
+        return const Left(CacheFailure('errors.generic'));
+      }
+      final reviewing = active.pauseAt(pausedAt);
+      await _dataSource.saveActiveSession(reviewing);
+      return Right(reviewing);
+    } on Object {
+      return const Left(CacheFailure('errors.generic'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, OvertimeSession>> resume(DateTime resumedAt) async {
+    try {
+      final reviewing = await _dataSource.loadActiveSession();
+      if (reviewing == null) {
+        return const Left(CacheFailure('errors.generic'));
+      }
+      final resumed = reviewing.resumeAt(resumedAt);
+      await _dataSource.saveActiveSession(resumed);
+      return Right(resumed);
+    } on Object {
+      return const Left(CacheFailure('errors.generic'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, OvertimeSnapshot>> submit() async {
+    try {
+      final reviewing = await _dataSource.loadActiveSession();
+      if (reviewing == null) {
         return Right(
           OvertimeSnapshot(history: await _dataSource.loadHistory()),
         );
       }
-      final completed = active.completeAt(endedAt);
+      final completed = reviewing.submit();
       final history = await _dataSource.prependHistory(completed);
       await _dataSource.clearActiveSession();
       return Right(OvertimeSnapshot(history: history));
