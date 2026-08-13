@@ -99,7 +99,7 @@ class OvertimeNotifier extends Notifier<OvertimeState> {
   }
 
   Future<void> start() async {
-    if (state.isSaving || state.isRunning) {
+    if (!state.isLoaded || state.isSaving || state.isRunning) {
       return;
     }
     final now = ref.read(overtimeClockProvider)();

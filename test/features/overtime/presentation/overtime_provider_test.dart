@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
@@ -56,6 +58,11 @@ void main() {
     when(
       () => repository.start(now),
     ).thenAnswer((_) async => Right<Failure, OvertimeSession>(started));
+    when(repository.load).thenAnswer(
+      (_) async =>
+          const Right<Failure, OvertimeSnapshot>(OvertimeSnapshot(history: [])),
+    );
+    await container.read(overtimeProvider.notifier).load();
 
     await container.read(overtimeProvider.notifier).start();
 
@@ -95,13 +102,20 @@ void main() {
   test(
     'exposes a localized error and retains state on persistence failure',
     () async {
+      when(repository.load).thenAnswer(
+        (_) async => const Right<Failure, OvertimeSnapshot>(
+          OvertimeSnapshot(history: []),
+        ),
+      );
       when(() => repository.start(now)).thenAnswer(
         (_) async => const Left<Failure, OvertimeSession>(
           CacheFailure('errors.generic'),
         ),
       );
 
-      await container.read(overtimeProvider.notifier).start();
+      final notifier = container.read(overtimeProvider.notifier);
+      await notifier.load();
+      await notifier.start();
 
       final state = container.read(overtimeProvider);
       expect(state.activeSession, isNull);
@@ -109,4 +123,20 @@ void main() {
       expect(state.isSaving, isFalse);
     },
   );
+
+  test('ignores start while the initial cache load is in progress', () async {
+    final pendingLoad = Completer<Either<Failure, OvertimeSnapshot>>();
+    when(repository.load).thenAnswer((_) => pendingLoad.future);
+    final notifier = container.read(overtimeProvider.notifier);
+
+    final loading = notifier.load();
+    await notifier.start();
+
+    verifyNever(() => repository.start(any()));
+    pendingLoad.complete(
+      const Right<Failure, OvertimeSnapshot>(OvertimeSnapshot(history: [])),
+    );
+    await loading;
+    expect(container.read(overtimeProvider).isLoaded, isTrue);
+  });
 }

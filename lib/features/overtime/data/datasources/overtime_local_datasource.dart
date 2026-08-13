@@ -33,8 +33,10 @@ class OvertimeLocalDataSource {
 
   Future<List<OvertimeSession>> prependHistory(OvertimeSession session) async {
     final history = await loadHistory();
-    final updated = [session, ...history]
-      ..sort((left, right) => right.startedAt.compareTo(left.startedAt));
+    final updated = [
+      session,
+      ...history.where((entry) => entry.id != session.id),
+    ]..sort((left, right) => right.startedAt.compareTo(left.startedAt));
     await _box.put(historyKey, updated.map(_encode).toList());
     return updated;
   }

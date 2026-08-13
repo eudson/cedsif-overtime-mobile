@@ -111,4 +111,31 @@ void main() {
             as List<dynamic>;
     expect((saved.first as Map<dynamic, dynamic>)['id'], 'latest');
   });
+
+  test(
+    'replaces a session with the same id instead of duplicating it',
+    () async {
+      when(() => box.get(OvertimeLocalDataSource.historyKey)).thenReturn([
+        {
+          'id': 'same-session',
+          'startedAt': '2026-08-13T09:00:00.000',
+          'endedAt': '2026-08-13T10:00:00.000',
+          'status': 'pending',
+        },
+      ]);
+      when(
+        () => box.put(OvertimeLocalDataSource.historyKey, any<dynamic>()),
+      ).thenAnswer((_) async {});
+      final retry = OvertimeSession(
+        id: 'same-session',
+        startedAt: DateTime(2026, 8, 13, 9),
+        endedAt: DateTime(2026, 8, 13, 10),
+        status: OvertimeSessionStatus.pending,
+      );
+
+      final history = await dataSource.prependHistory(retry);
+
+      expect(history, [retry]);
+    },
+  );
 }

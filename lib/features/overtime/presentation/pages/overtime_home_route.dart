@@ -31,7 +31,7 @@ class _OvertimeHomeRouteState extends ConsumerState<OvertimeHomeRoute> {
     return HomePage(
       activeSession: state.activeSession,
       elapsed: state.elapsed,
-      isBusy: state.isSaving,
+      isBusy: state.isSaving || !state.isLoaded,
       errorMessage: state.errorKey?.tr(),
       onStart: ref.read(overtimeProvider.notifier).start,
       onStop: ref.read(overtimeProvider.notifier).stop,
