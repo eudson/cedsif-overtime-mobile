@@ -8,5 +8,9 @@ abstract interface class OvertimeRepository {
 
   Future<Either<Failure, OvertimeSession>> start(DateTime startedAt);
 
-  Future<Either<Failure, OvertimeSnapshot>> stop(DateTime endedAt);
+  Future<Either<Failure, OvertimeSession>> pause(DateTime pausedAt);
+
+  Future<Either<Failure, OvertimeSession>> resume(DateTime resumedAt);
+
+  Future<Either<Failure, OvertimeSnapshot>> submit();
 }

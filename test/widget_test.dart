@@ -41,7 +41,15 @@ class _FakeOvertimeRepository implements OvertimeRepository {
       );
 
   @override
-  Future<Either<Failure, OvertimeSnapshot>> stop(DateTime endedAt) async =>
+  Future<Either<Failure, OvertimeSession>> pause(DateTime pausedAt) async =>
+      const Left(CacheFailure('errors.generic'));
+
+  @override
+  Future<Either<Failure, OvertimeSession>> resume(DateTime resumedAt) async =>
+      const Left(CacheFailure('errors.generic'));
+
+  @override
+  Future<Either<Failure, OvertimeSnapshot>> submit() async =>
       const Right(OvertimeSnapshot(history: []));
 }
 

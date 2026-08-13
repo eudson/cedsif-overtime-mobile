@@ -5,6 +5,15 @@
   "home": {
     "placeholder": "Home"
   },
+  "overtimeReview": {
+    "title": "Counting stopped",
+    "subtitle": "Review and submit to e-SNGRHE.",
+    "start": "Start",
+    "end": "End",
+    "registeredTime": "Registered time",
+    "submit": "Submit to e-SNGRHE",
+    "resume": "Resume counting"
+  },
   "common": {
     "retry": "Retry",
     "cancel": "Cancel"

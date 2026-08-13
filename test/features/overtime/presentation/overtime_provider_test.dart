@@ -71,19 +71,76 @@ void main() {
     verify(() => repository.start(now)).called(1);
   });
 
-  test('stop creates a pending history snapshot and returns to idle', () async {
+  test('pause freezes counting and enters review state', () async {
     final active = OvertimeSession(
       id: 'active',
       startedAt: DateTime(2026, 8, 13, 9),
       status: OvertimeSessionStatus.active,
     );
-    final completed = active.completeAt(now);
+    final reviewing = active.pauseAt(now);
     when(repository.load).thenAnswer(
       (_) async => Right<Failure, OvertimeSnapshot>(
         OvertimeSnapshot(activeSession: active, history: const []),
       ),
     );
-    when(() => repository.stop(now)).thenAnswer(
+    when(
+      () => repository.pause(now),
+    ).thenAnswer((_) async => Right<Failure, OvertimeSession>(reviewing));
+    final notifier = container.read(overtimeProvider.notifier);
+    await notifier.load();
+
+    await notifier.pause();
+
+    now = DateTime(2026, 8, 13, 11);
+    final state = container.read(overtimeProvider);
+    expect(state.activeSession, reviewing);
+    expect(state.isReviewing, isTrue);
+    expect(state.elapsed, const Duration(hours: 1));
+  });
+
+  test('resume returns to counting while excluding review time', () async {
+    final reviewing = OvertimeSession(
+      id: 'active',
+      startedAt: DateTime(2026, 8, 13, 9),
+      endedAt: DateTime(2026, 8, 13, 10),
+      status: OvertimeSessionStatus.reviewing,
+    );
+    final resumedAt = DateTime(2026, 8, 13, 10, 30);
+    final resumed = reviewing.resumeAt(resumedAt);
+    now = resumedAt;
+    when(repository.load).thenAnswer(
+      (_) async => Right<Failure, OvertimeSnapshot>(
+        OvertimeSnapshot(activeSession: reviewing, history: const []),
+      ),
+    );
+    when(
+      () => repository.resume(resumedAt),
+    ).thenAnswer((_) async => Right<Failure, OvertimeSession>(resumed));
+    final notifier = container.read(overtimeProvider.notifier);
+    await notifier.load();
+
+    await notifier.resume();
+
+    final state = container.read(overtimeProvider);
+    expect(state.activeSession, resumed);
+    expect(state.isRunning, isTrue);
+    expect(state.elapsed, const Duration(hours: 1));
+  });
+
+  test('submit creates pending history and returns to idle', () async {
+    final reviewing = OvertimeSession(
+      id: 'active',
+      startedAt: DateTime(2026, 8, 13, 9),
+      endedAt: now,
+      status: OvertimeSessionStatus.reviewing,
+    );
+    final completed = reviewing.submit();
+    when(repository.load).thenAnswer(
+      (_) async => Right<Failure, OvertimeSnapshot>(
+        OvertimeSnapshot(activeSession: reviewing, history: const []),
+      ),
+    );
+    when(repository.submit).thenAnswer(
       (_) async => Right<Failure, OvertimeSnapshot>(
         OvertimeSnapshot(history: [completed]),
       ),
@@ -91,12 +148,11 @@ void main() {
     final notifier = container.read(overtimeProvider.notifier);
     await notifier.load();
 
-    await notifier.stop();
+    await notifier.submit();
 
     final state = container.read(overtimeProvider);
     expect(state.activeSession, isNull);
-    expect(state.history.single, completed);
-    expect(state.history.single.status, OvertimeSessionStatus.pending);
+    expect(state.history, [completed]);
   });
 
   test(
