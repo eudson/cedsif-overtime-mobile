@@ -172,4 +172,26 @@ void main() {
     await tester.tap(find.text('Terminar contagem'));
     expect(stops, 1);
   });
+
+  testWidgets('running timer fits inside its progress circle', (tester) async {
+    await pumpHome(
+      tester,
+      activeSession: OvertimeSession(
+        id: 'active',
+        startedAt: DateTime(2026, 8, 13, 8, 24),
+        status: OvertimeSessionStatus.active,
+      ),
+      elapsed: const Duration(hours: 23, minutes: 59, seconds: 59),
+    );
+
+    final circle = tester.getRect(
+      find.byKey(const ValueKey('home-running-timer-circle')),
+    );
+    final timer = tester.getRect(
+      find.byKey(const ValueKey('home-running-timer')),
+    );
+
+    expect(timer.left, greaterThan(circle.left));
+    expect(timer.right, lessThan(circle.right));
+  });
 }

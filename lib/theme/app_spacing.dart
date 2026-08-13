@@ -40,6 +40,7 @@ abstract final class AppSpacing {
   static const double homeSummaryMinHeight = 96;
   static const double runningTimerSize = 250;
   static const double runningTimerStroke = 14;
+  static const double runningTimerHorizontalInset = 24;
   static const double historyCardMinHeight = 96;
   static const double historyCardRowBreakpoint = 320;
   static const double elevationHero = 12;

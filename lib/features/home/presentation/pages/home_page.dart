@@ -159,6 +159,7 @@ class _RunningContent extends StatelessWidget {
         const SizedBox(height: AppSpacing.space48),
         Center(
           child: SizedBox.square(
+            key: const ValueKey('home-running-timer-circle'),
             dimension: AppSpacing.runningTimerSize,
             child: Stack(
               fit: StackFit.expand,
@@ -181,12 +182,20 @@ class _RunningContent extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.space16),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        _formatDuration(elapsed),
-                        key: const ValueKey('home-running-timer'),
-                        style: AppTypography.timerLarge,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.runningTimerHorizontalInset,
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            _formatDuration(elapsed),
+                            key: const ValueKey('home-running-timer'),
+                            style: AppTypography.timerLarge,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.space8),
