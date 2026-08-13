@@ -24,7 +24,14 @@
     "start": "Iniciar",
     "thisMonth": "Este mês",
     "approvedHours": "Horas aprovadas",
-    "approvedTotal": "18:30"
+    "approvedTotal": "18:30",
+    "inProgress": "EM CURSO",
+    "plannedDuration": "de 04:00 previstas",
+    "startedAt": "Início {time} · Ana M. Cossa",
+    "stop": "Terminar contagem",
+    "submitAfterStop": "O envio ao e-SNGRHE fica disponível depois de terminar",
+    "insidePerimeterRunning": "Dentro do perímetro",
+    "onlineUpper": "ONLINE"
   },
   "history": {
     "title": "Histórico"
@@ -41,6 +48,31 @@
     "pending": "Pendente",
     "blocked": "Bloqueado",
     "offline": "Offline"
+  },
+  "calendar": {
+    "months": {
+      "1": "Jan",
+      "2": "Fev",
+      "3": "Mar",
+      "4": "Abr",
+      "5": "Mai",
+      "6": "Jun",
+      "7": "Jul",
+      "8": "Ago",
+      "9": "Set",
+      "10": "Out",
+      "11": "Nov",
+      "12": "Dez"
+    },
+    "weekdays": {
+      "1": "Seg",
+      "2": "Ter",
+      "3": "Qua",
+      "4": "Qui",
+      "5": "Sex",
+      "6": "Sáb",
+      "7": "Dom"
+    }
   },
   "common": {
     "retry": "Tentar novamente",

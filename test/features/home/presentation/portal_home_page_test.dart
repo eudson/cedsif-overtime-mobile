@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cedsif_overtime_mobile/features/home/presentation/pages/home_page.dart';
+import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/overtime_session.dart';
 import 'package:cedsif_overtime_mobile/theme/app_spacing.dart';
 import 'package:cedsif_overtime_mobile/theme/app_theme.dart';
 
@@ -27,6 +28,14 @@ class _HomeTranslationsLoader extends AssetLoader {
       'thisMonth': 'Este mês',
       'approvedHours': 'Horas aprovadas',
       'approvedTotal': '18:30',
+      'inProgress': 'EM CURSO',
+      'plannedDuration': 'de 04:00 previstas',
+      'startedAt': 'Início {time} · Ana M. Cossa',
+      'stop': 'Terminar contagem',
+      'submitAfterStop':
+          'O envio ao e-SNGRHE fica disponível depois de terminar',
+      'insidePerimeterRunning': 'Dentro do perímetro',
+      'onlineUpper': 'ONLINE',
     },
     'navigation': {
       'home': 'Início',
@@ -48,7 +57,11 @@ void main() {
   Future<void> pumpHome(
     WidgetTester tester, {
     VoidCallback? onStart,
+    VoidCallback? onStop,
     VoidCallback? onHistorySelected,
+    OvertimeSession? activeSession,
+    Duration elapsed = Duration.zero,
+    bool isBusy = false,
   }) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -71,7 +84,11 @@ void main() {
             localizationsDelegates: context.localizationDelegates,
             home: HomePage(
               onStart: onStart,
+              onStop: onStop,
               onHistorySelected: onHistorySelected,
+              activeSession: activeSession,
+              elapsed: elapsed,
+              isBusy: isBusy,
             ),
           ),
         ),
@@ -128,5 +145,53 @@ void main() {
     expect(size.height, greaterThanOrEqualTo(AppSpacing.touchTarget));
     await tester.tap(start);
     expect(starts, 1);
+  });
+
+  testWidgets('running state shows live chronometer and stops counting', (
+    tester,
+  ) async {
+    var stops = 0;
+    await pumpHome(
+      tester,
+      activeSession: OvertimeSession(
+        id: 'active',
+        startedAt: DateTime(2026, 8, 13, 8, 24),
+        status: OvertimeSessionStatus.active,
+      ),
+      elapsed: const Duration(hours: 1, minutes: 36, seconds: 5),
+      onStop: () => stops++,
+    );
+
+    expect(find.text('EM CURSO'), findsOneWidget);
+    expect(find.text('01:36:05'), findsOneWidget);
+    expect(find.text('de 04:00 previstas'), findsOneWidget);
+    expect(find.text('Início 08:24 · Ana M. Cossa'), findsOneWidget);
+    expect(find.text('Terminar contagem'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsNothing);
+
+    await tester.tap(find.text('Terminar contagem'));
+    expect(stops, 1);
+  });
+
+  testWidgets('running timer fits inside its progress circle', (tester) async {
+    await pumpHome(
+      tester,
+      activeSession: OvertimeSession(
+        id: 'active',
+        startedAt: DateTime(2026, 8, 13, 8, 24),
+        status: OvertimeSessionStatus.active,
+      ),
+      elapsed: const Duration(hours: 23, minutes: 59, seconds: 59),
+    );
+
+    final circle = tester.getRect(
+      find.byKey(const ValueKey('home-running-timer-circle')),
+    );
+    final timer = tester.getRect(
+      find.byKey(const ValueKey('home-running-timer')),
+    );
+
+    expect(timer.left, greaterThan(circle.left));
+    expect(timer.right, lessThan(circle.right));
   });
 }

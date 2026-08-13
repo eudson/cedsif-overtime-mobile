@@ -7,41 +7,42 @@ import 'package:go_router/go_router.dart';
 import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/facial_validation_stub_page.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/login_page.dart';
-import 'package:cedsif_overtime_mobile/features/history/presentation/pages/history_page.dart';
-import 'package:cedsif_overtime_mobile/features/home/presentation/pages/home_page.dart';
+import 'package:cedsif_overtime_mobile/features/overtime/presentation/pages/overtime_history_route.dart';
+import 'package:cedsif_overtime_mobile/features/overtime/presentation/pages/overtime_home_route.dart';
 
 String? appRedirect(BuildContext? context, GoRouterState state) => null;
 
-GoRouter createAppRouter({
-  String initialLocation = RouteConstants.splash,
-}) => GoRouter(
-  initialLocation: initialLocation,
-  redirect: appRedirect,
-  routes: <RouteBase>[
-    GoRoute(
-      path: RouteConstants.splash,
-      builder: (context, state) => const SplashPage(),
-    ),
-    GoRoute(
-      path: RouteConstants.login,
-      builder: (context, state) => const LoginPage(),
-    ),
-    GoRoute(
-      path: RouteConstants.facialValidation,
-      builder: (context, state) => const FacialValidationStubPage(),
-    ),
-    GoRoute(
-      path: RouteConstants.home,
-      builder: (context, state) =>
-          HomePage(onHistorySelected: () => context.go(RouteConstants.history)),
-    ),
-    GoRoute(
-      path: RouteConstants.history,
-      builder: (context, state) =>
-          HistoryPage(onHomeSelected: () => context.go(RouteConstants.home)),
-    ),
-  ],
-);
+GoRouter createAppRouter({String initialLocation = RouteConstants.splash}) =>
+    GoRouter(
+      initialLocation: initialLocation,
+      redirect: appRedirect,
+      routes: <RouteBase>[
+        GoRoute(
+          path: RouteConstants.splash,
+          builder: (context, state) => const SplashPage(),
+        ),
+        GoRoute(
+          path: RouteConstants.login,
+          builder: (context, state) => const LoginPage(),
+        ),
+        GoRoute(
+          path: RouteConstants.facialValidation,
+          builder: (context, state) => const FacialValidationStubPage(),
+        ),
+        GoRoute(
+          path: RouteConstants.home,
+          builder: (context, state) => OvertimeHomeRoute(
+            onHistorySelected: () => context.go(RouteConstants.history),
+          ),
+        ),
+        GoRoute(
+          path: RouteConstants.history,
+          builder: (context, state) => OvertimeHistoryRoute(
+            onHomeSelected: () => context.go(RouteConstants.home),
+          ),
+        ),
+      ],
+    );
 
 final routerProvider = Provider<GoRouter>((ref) {
   final router = createAppRouter();
