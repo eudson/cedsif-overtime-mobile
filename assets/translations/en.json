@@ -4,6 +4,7 @@
   },
   "auth": {
     "invalidCredentials": "Invalid NUIT or password",
+    "continue": "Continue",
     "logout": "Sign out",
     "logoutConfirmTitle": "Sign out?",
     "logoutConfirmMessage": "You will need to sign in again to continue."

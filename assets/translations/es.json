@@ -4,6 +4,7 @@
   },
   "auth": {
     "invalidCredentials": "NUIT o contraseña no válidos",
+    "continue": "Continuar",
     "logout": "Cerrar sesión",
     "logoutConfirmTitle": "¿Cerrar sesión?",
     "logoutConfirmMessage": "Tendrá que iniciar sesión de nuevo para continuar."

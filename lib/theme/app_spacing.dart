@@ -46,4 +46,5 @@ abstract final class AppSpacing {
   static const double elevationHero = 12;
 
   static const Duration loginLoadingDuration = Duration(milliseconds: 450);
+  static const Duration menuInteractionDuration = Duration(milliseconds: 180);
 }

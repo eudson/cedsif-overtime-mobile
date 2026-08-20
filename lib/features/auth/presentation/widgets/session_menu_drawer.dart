@@ -6,6 +6,7 @@ import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/logi
 import 'package:cedsif_overtime_mobile/theme/app_colors.dart';
 import 'package:cedsif_overtime_mobile/theme/app_spacing.dart';
 import 'package:cedsif_overtime_mobile/theme/app_typography.dart';
+import 'package:cedsif_overtime_mobile/widgets/app_button.dart';
 
 class SessionMenuDrawer extends ConsumerWidget {
   const SessionMenuDrawer({required this.onLoggedOut, super.key});
@@ -28,19 +29,70 @@ class SessionMenuDrawer extends ConsumerWidget {
               ),
             ),
             const Divider(height: 1, color: AppColors.border),
-            ListTile(
-              minTileHeight: AppSpacing.touchTarget,
-              leading: state.isLoading
-                  ? const SizedBox.square(
-                      dimension: AppSpacing.iconMedium,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.logout_rounded),
-              title: Text('auth.logout'.tr()),
-              enabled: !state.isLoading,
-              onTap: state.isLoading
-                  ? null
-                  : () => _confirmLogout(context, ref),
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.space16),
+              child: TextButton(
+                style: ButtonStyle(
+                  alignment: Alignment.centerLeft,
+                  animationDuration: AppSpacing.menuInteractionDuration,
+                  minimumSize: const WidgetStatePropertyAll(
+                    Size.fromHeight(AppSpacing.touchTarget),
+                  ),
+                  padding: const WidgetStatePropertyAll(
+                    EdgeInsets.symmetric(horizontal: AppSpacing.space16),
+                  ),
+                  foregroundColor: const WidgetStatePropertyAll(
+                    AppColors.danger,
+                  ),
+                  backgroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.hovered) ||
+                        states.contains(WidgetState.focused) ||
+                        states.contains(WidgetState.pressed)) {
+                      return AppColors.dangerBackground;
+                    }
+                    return AppColors.transparent;
+                  }),
+                  overlayColor: const WidgetStatePropertyAll(
+                    AppColors.transparent,
+                  ),
+                  shape: WidgetStatePropertyAll(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusCard,
+                      ),
+                    ),
+                  ),
+                  textStyle: const WidgetStatePropertyAll(
+                    AppTypography.labelStrong,
+                  ),
+                ),
+                onPressed: state.isLoading
+                    ? null
+                    : () => _confirmLogout(context, ref),
+                child: Row(
+                  children: [
+                    if (state.isLoading)
+                      const SizedBox.square(
+                        dimension: AppSpacing.iconMedium,
+                        child: CircularProgressIndicator(
+                          color: AppColors.danger,
+                          strokeWidth: AppSpacing.progressStrokeWidth,
+                        ),
+                      )
+                    else
+                      const Icon(Icons.logout_rounded),
+                    const SizedBox(width: AppSpacing.space16),
+                    Expanded(
+                      child: Text(
+                        'auth.logout'.tr(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -55,13 +107,27 @@ class SessionMenuDrawer extends ConsumerWidget {
         title: Text('auth.logoutConfirmTitle'.tr()),
         content: Text('auth.logoutConfirmMessage'.tr()),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text('common.cancel'.tr()),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text('common.confirm'.tr()),
+          SizedBox(
+            width: double.maxFinite,
+            child: Row(
+              children: [
+                Expanded(
+                  child: AppButton(
+                    label: 'common.cancel'.tr(),
+                    variant: AppButtonVariant.secondary,
+                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.space12),
+                Expanded(
+                  child: AppButton(
+                    label: 'auth.continue'.tr(),
+                    variant: AppButtonVariant.destructive,
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

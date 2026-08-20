@@ -11,6 +11,10 @@ import 'package:cedsif_overtime_mobile/core/error/failures.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/widgets/session_menu_drawer.dart';
+import 'package:cedsif_overtime_mobile/theme/app_colors.dart';
+import 'package:cedsif_overtime_mobile/theme/app_spacing.dart';
+import 'package:cedsif_overtime_mobile/theme/app_theme.dart';
+import 'package:cedsif_overtime_mobile/widgets/app_button.dart';
 
 class _MockLogoutUseCase extends Mock implements LogoutUseCase {}
 
@@ -22,6 +26,7 @@ class _MenuTranslationsLoader extends AssetLoader {
     'navigation': {'menu': 'Menu'},
     'auth': {
       'logout': 'Terminar sessão',
+      'continue': 'Continuar',
       'logoutConfirmTitle': 'Terminar sessão?',
       'logoutConfirmMessage': 'Terá de iniciar sessão novamente.',
     },
@@ -58,6 +63,7 @@ void main() {
           saveLocale: false,
           child: Builder(
             builder: (context) => MaterialApp(
+              theme: AppTheme.light,
               locale: context.locale,
               supportedLocales: context.supportedLocales,
               localizationsDelegates: context.localizationDelegates,
@@ -88,6 +94,61 @@ void main() {
     expect(find.text('Simular Estados'), findsNothing);
   });
 
+  testWidgets('anchors the destructive logout action at the drawer bottom', (
+    tester,
+  ) async {
+    final logoutUseCase = _MockLogoutUseCase();
+
+    await pumpMenu(tester, logoutUseCase: logoutUseCase, onLoggedOut: () {});
+
+    final logoutButtonFinder = find.widgetWithText(
+      TextButton,
+      'Terminar sessão',
+    );
+    final logoutButton = tester.widget<TextButton>(logoutButtonFinder);
+    final drawerBottom = tester.getBottomRight(find.byType(Drawer)).dy;
+    final buttonBottom = tester.getBottomRight(logoutButtonFinder).dy;
+
+    expect(drawerBottom - buttonBottom, lessThanOrEqualTo(24));
+    expect(
+      logoutButton.style?.foregroundColor?.resolve(<WidgetState>{}),
+      AppColors.danger,
+    );
+    expect(
+      logoutButton.style?.backgroundColor?.resolve(<WidgetState>{
+        WidgetState.hovered,
+      }),
+      AppColors.dangerBackground,
+    );
+    expect(
+      logoutButton.style?.animationDuration,
+      AppSpacing.menuInteractionDuration,
+    );
+  });
+
+  testWidgets('shows outlined cancel and destructive continue side by side', (
+    tester,
+  ) async {
+    final logoutUseCase = _MockLogoutUseCase();
+
+    await pumpMenu(tester, logoutUseCase: logoutUseCase, onLoggedOut: () {});
+    await tester.tap(find.text('Terminar sessão'));
+    await tester.pumpAndSettle();
+
+    final cancelFinder = find.widgetWithText(AppButton, 'Cancelar');
+    final continueFinder = find.widgetWithText(AppButton, 'Continuar');
+    final cancelButton = tester.widget<AppButton>(cancelFinder);
+    final continueButton = tester.widget<AppButton>(continueFinder);
+    final cancelCenter = tester.getCenter(cancelFinder);
+    final continueCenter = tester.getCenter(continueFinder);
+
+    expect(cancelButton.variant, AppButtonVariant.secondary);
+    expect(continueButton.variant, AppButtonVariant.destructive);
+    expect(cancelCenter.dy, continueCenter.dy);
+    expect(cancelCenter.dx, lessThan(continueCenter.dx));
+    expect(tester.getSize(cancelFinder), tester.getSize(continueFinder));
+  });
+
   testWidgets('requires confirmation before logging out', (tester) async {
     final logoutUseCase = _MockLogoutUseCase();
     var loggedOut = false;
@@ -110,7 +171,7 @@ void main() {
 
     await tester.tap(find.text('Terminar sessão'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Confirmar'));
+    await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
 
     verify(logoutUseCase.call).called(1);
