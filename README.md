@@ -110,6 +110,22 @@ Configuration is read through `EnvironmentConfig` from `--dart-define-from-file`
 
 Values passed as Dart defines are embedded in the compiled application and can be recovered from it. Never place passwords, private keys, service-account credentials, access tokens, or other secrets in `.env.dev`, `.env.prod`, the repository, or Dart defines. Runtime credentials belong in secure storage and must come from an approved backend flow.
 
+### Temporary facial-verification simulation
+
+Until the SCVD integration is available, facial capture can be exercised only
+with `ENV=development`. On the facial-verification screen, **Continue with
+simulation** captures a still image and returns a temporary reference prefixed
+with `SIMULATED-`, allowing the development flow to continue. The image remains
+on the device only for the duration of the simulation and is deleted
+immediately afterwards; this temporary flow neither uploads nor persists it.
+
+Set `ENV=staging` or `ENV=production` to disable the simulation. Those profiles
+do not initialize the camera and fail closed, blocking continuation until real
+backend-to-SCVD verification is implemented. Never enable the simulated
+verifier in staging or production. Developers can enable or disable the flow by
+changing `ENV` in the selected `.env.dev` or ignored `.env.local` file and
+restarting the app.
+
 ## Architecture
 
 The application uses feature-first Clean Architecture:

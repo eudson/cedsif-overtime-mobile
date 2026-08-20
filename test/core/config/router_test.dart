@@ -6,7 +6,9 @@ import 'package:fpdart/fpdart.dart';
 import 'package:cedsif_overtime_mobile/core/config/router.dart';
 import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
 import 'package:cedsif_overtime_mobile/core/error/failures.dart';
-import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/facial_validation_stub_page.dart';
+import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/facial_validation_page.dart';
+import 'package:cedsif_overtime_mobile/features/auth/presentation/services/facial_camera.dart';
+import 'package:cedsif_overtime_mobile/features/auth/presentation/services/facial_verifier.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
@@ -66,6 +68,32 @@ class _FakeLogoutUseCase implements LogoutUseCase {
       const Right<Failure, Unit>(unit);
 }
 
+class _ReadyFacialCamera implements FacialCamera {
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Widget buildPreview() => const SizedBox(key: Key('router-camera-preview'));
+
+  @override
+  Future<CapturedFace> capture() async =>
+      CapturedFace(path: '/tmp/router-face.jpg', delete: () async {});
+
+  @override
+  Future<void> dispose() async {}
+}
+
+class _SuccessfulFacialVerifier implements FacialVerifier {
+  @override
+  Future<String> verify(CapturedFace face) async => 'SIMULATED-router-test';
+}
+
+Widget _buildFacialValidation(BuildContext context) => FacialValidationPage(
+  camera: _ReadyFacialCamera(),
+  verifier: _SuccessfulFacialVerifier(),
+  simulationEnabled: true,
+);
+
 ProviderScope _testScope(Widget child, {OvertimeRepository? repository}) =>
     ProviderScope(
       overrides: [
@@ -122,6 +150,7 @@ void main() {
     final router = createAppRouter(
       initialLocation: RouteConstants.login,
       hasValidSession: validSession,
+      facialValidationBuilder: _buildFacialValidation,
     );
     addTearDown(router.dispose);
 
@@ -131,7 +160,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.state.uri.path, RouteConstants.facialValidation);
-    expect(find.byType(FacialValidationStubPage), findsOneWidget);
+    expect(find.byType(FacialValidationPage), findsOneWidget);
   });
 
   testWidgets('authenticated Home exposes the approved session menu', (
@@ -187,6 +216,7 @@ void main() {
     final router = createAppRouter(
       initialLocation: RouteConstants.login,
       hasValidSession: validSession,
+      facialValidationBuilder: _buildFacialValidation,
     );
     addTearDown(router.dispose);
 
@@ -195,7 +225,7 @@ void main() {
     );
     router.go(RouteConstants.facialValidation);
     await tester.pumpAndSettle();
-    expect(find.byType(FacialValidationStubPage), findsOneWidget);
+    expect(find.byType(FacialValidationPage), findsOneWidget);
 
     router.go(RouteConstants.home);
     await tester.pumpAndSettle();
@@ -210,6 +240,7 @@ void main() {
     final router = createAppRouter(
       initialLocation: RouteConstants.facialValidation,
       hasValidSession: validSession,
+      facialValidationBuilder: _buildFacialValidation,
     );
     addTearDown(router.dispose);
 
@@ -218,9 +249,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(FacialValidationStubPage), findsOneWidget);
+    expect(find.byType(FacialValidationPage), findsOneWidget);
     expect(find.byType(AppButton), findsOneWidget);
 
+    await tester.ensureVisible(find.byType(AppButton));
     await tester.tap(find.byType(AppButton));
     await tester.pumpAndSettle();
 

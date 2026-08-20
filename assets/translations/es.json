@@ -4,6 +4,12 @@
   },
   "auth": {
     "invalidCredentials": "NUIT o contraseña no válidos",
+    "facialValidation": "Verificación facial",
+    "facialInstructions": "Coloque el rostro dentro de la imagen y continúe para simular la verificación.",
+    "simulateAndContinue": "Continuar con simulación",
+    "cameraUnavailable": "No se pudo acceder a la cámara. Compruebe el permiso e inténtelo de nuevo.",
+    "verificationUnavailable": "La verificación facial no está disponible en este entorno hasta que se complete la integración con SCVD.",
+    "verificationFailed": "No se pudo completar la verificación facial. Inténtelo de nuevo.",
     "continue": "Continuar",
     "logout": "Cerrar sesión",
     "logoutConfirmTitle": "¿Cerrar sesión?",

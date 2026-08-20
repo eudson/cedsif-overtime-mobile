@@ -5,13 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
-import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/facial_validation_stub_page.dart';
+import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/facial_validation_page.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/presentation/pages/overtime_history_route.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/presentation/pages/overtime_home_route.dart';
 
 typedef SessionValidator = Future<bool> Function();
+typedef FacialValidationBuilder = Widget Function(BuildContext context);
 
 final class SessionExpiryRefresh extends ChangeNotifier {
   SessionExpiryRefresh({DateTime Function()? now}) : _now = now ?? DateTime.now;
@@ -61,8 +62,11 @@ GoRouter createAppRouter({
   String initialLocation = RouteConstants.splash,
   SessionValidator? hasValidSession,
   Listenable? sessionRefresh,
+  FacialValidationBuilder? facialValidationBuilder,
 }) {
   final validateSession = hasValidSession ?? () async => false;
+  final buildFacialValidation =
+      facialValidationBuilder ?? (_) => const FacialValidationPage();
   return GoRouter(
     initialLocation: initialLocation,
     redirect: (context, state) =>
@@ -79,7 +83,7 @@ GoRouter createAppRouter({
       ),
       GoRoute(
         path: RouteConstants.facialValidation,
-        builder: (context, state) => const FacialValidationStubPage(),
+        builder: (context, state) => buildFacialValidation(context),
       ),
       GoRoute(
         path: RouteConstants.home,
