@@ -81,7 +81,7 @@ class NetworkClient {
     );
     final dio = dioFactory(options);
     final refreshDio = dioFactory(options);
-    dio.interceptors.clear(keepImplyContentTypeInterceptor: false);
+    dio.interceptors.clear();
     dio.interceptors.addAll(<Interceptor>[
       AuthHeaderInterceptor(secureStorage, apiBaseUrl: baseUrl),
       TokenRefreshInterceptor(

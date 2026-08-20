@@ -41,6 +41,29 @@ class _RecordingAdapter implements HttpClientAdapter {
   }
 }
 
+class _CapturingAdapter implements HttpClientAdapter {
+  RequestOptions? request;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    request = options;
+    return ResponseBody.fromString(
+      '{"accessToken":"access","refreshToken":"refresh","expiresIn":120}',
+      200,
+      headers: <String, List<String>>{
+        Headers.contentTypeHeader: <String>[Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
 class _RecordingSink implements AppLogSink {
   final List<Object?> messages = <Object?>[];
 
@@ -128,10 +151,39 @@ void main() {
 
     expect(client.dio.options.baseUrl, 'https://example.test');
     expect(client.dio.options.connectTimeout, const Duration(seconds: 5));
-    expect(client.dio.interceptors, hasLength(3));
-    expect(client.dio.interceptors[0], isA<AuthHeaderInterceptor>());
-    expect(client.dio.interceptors[1], isA<TokenRefreshInterceptor>());
-    expect(client.dio.interceptors[2], isA<CacheInterceptor>());
+    expect(client.dio.interceptors, hasLength(4));
+    expect(client.dio.interceptors[1], isA<AuthHeaderInterceptor>());
+    expect(client.dio.interceptors[2], isA<TokenRefreshInterceptor>());
+    expect(client.dio.interceptors[3], isA<CacheInterceptor>());
+  });
+
+  test('infers JSON content type for map request bodies', () async {
+    final adapters = <_CapturingAdapter>[];
+    Dio createDio(BaseOptions options) {
+      final adapter = _CapturingAdapter();
+      adapters.add(adapter);
+      return Dio(options)..httpClientAdapter = adapter;
+    }
+
+    final client = NetworkClient.create(
+      secureStorage: _MockSecureStorage(),
+      authEventBus: AuthEventBus(),
+      networkMonitor: _MockNetworkMonitor(),
+      cacheBox: _MockBox(),
+      includeDebugLogger: false,
+      baseUrl: 'https://example.test',
+      dioFactory: createDio,
+    );
+
+    await client.dio.post<dynamic>(
+      ApiEndpoints.login,
+      data: <String, Object?>{
+        'nuit': '123456789',
+        'password': 'local-password',
+      },
+    );
+
+    expect(adapters.first.request?.contentType, Headers.jsonContentType);
   });
 
   test('auth interceptor never attaches credentials cross-origin', () async {
