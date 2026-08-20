@@ -18,6 +18,7 @@
     "cameraUnavailable": "Não foi possível aceder à câmara. Verifique a permissão e tente novamente.",
     "verificationUnavailable": "A verificação facial está indisponível neste ambiente até à integração com o SCVD.",
     "verificationFailed": "Não foi possível concluir a verificação facial. Tente novamente.",
+    "facialRequired": "Conclua a validação facial antes de iniciar as horas extraordinárias.",
     "continue": "Continuar",
     "logout": "Terminar sessão",
     "logoutConfirmTitle": "Terminar sessão?",

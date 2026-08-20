@@ -15,6 +15,8 @@ import 'package:cedsif_overtime_mobile/core/storage/image_cache_manager.dart';
 import 'package:cedsif_overtime_mobile/core/storage/local_storage.dart';
 import 'package:cedsif_overtime_mobile/core/storage/secure_storage.dart';
 import 'package:cedsif_overtime_mobile/core/sync/sync_engine.dart';
+import 'package:cedsif_overtime_mobile/core/sync/foreground_sync_coordinator.dart';
+import 'package:cedsif_overtime_mobile/core/sync/generic_sync_processor.dart';
 import 'package:cedsif_overtime_mobile/core/utils/logger.dart';
 
 Never _missingBootstrapResource(String name) =>
@@ -68,6 +70,26 @@ final dioProvider = Provider<Dio>(
   (ref) => ref.watch(networkClientProvider).dio,
 );
 
+final genericSyncProcessorProvider = Provider<GenericSyncProcessor>(
+  (ref) => GenericSyncProcessor(
+    pendingRequestsBox: ref.watch(pendingRequestsBoxProvider),
+    handler: DioPendingRequestHandler(ref.watch(dioProvider)),
+  ),
+);
+
+final foregroundSyncCoordinatorProvider = Provider<ForegroundSyncCoordinator>((
+  ref,
+) {
+  final coordinator = ForegroundSyncCoordinator(
+    syncEngine: ref.watch(syncEngineProvider),
+    processPendingRequests: ref
+        .watch(genericSyncProcessorProvider)
+        .processPendingRequests,
+  );
+  ref.onDispose(() => unawaited(coordinator.dispose()));
+  return coordinator;
+});
+
 final imageCacheManagerProvider = Provider<ImageCacheManager>(
   (ref) => _missingBootstrapResource('ImageCacheManager'),
 );
@@ -115,6 +137,7 @@ class CoreResourceOwner extends ConsumerWidget {
       ..watch(appDatabaseProvider)
       ..watch(authEventBusProvider)
       ..watch(syncEngineProvider)
+      ..watch(foregroundSyncCoordinatorProvider)
       ..watch(networkClientProvider);
     return child;
   }

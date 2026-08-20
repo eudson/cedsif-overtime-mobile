@@ -2,19 +2,21 @@ import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cedsif_overtime_mobile/core/config/environment_config.dart';
 import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/services/facial_camera.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/services/facial_verifier.dart';
+import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
 import 'package:cedsif_overtime_mobile/theme/app_colors.dart';
 import 'package:cedsif_overtime_mobile/theme/app_spacing.dart';
 import 'package:cedsif_overtime_mobile/theme/app_typography.dart';
 import 'package:cedsif_overtime_mobile/widgets/app_button.dart';
 import 'package:cedsif_overtime_mobile/widgets/app_scaffold.dart';
 
-class FacialValidationPage extends StatefulWidget {
+class FacialValidationPage extends ConsumerStatefulWidget {
   const FacialValidationPage({
     this.camera,
     this.verifier,
@@ -29,10 +31,11 @@ class FacialValidationPage extends StatefulWidget {
   final ValueChanged<String>? onValidated;
 
   @override
-  State<FacialValidationPage> createState() => _FacialValidationPageState();
+  ConsumerState<FacialValidationPage> createState() =>
+      _FacialValidationPageState();
 }
 
-class _FacialValidationPageState extends State<FacialValidationPage>
+class _FacialValidationPageState extends ConsumerState<FacialValidationPage>
     with WidgetsBindingObserver {
   late final FacialCamera _camera;
   late final FacialVerifier _verifier;
@@ -121,6 +124,7 @@ class _FacialValidationPageState extends State<FacialValidationPage>
       if (onValidated != null) {
         onValidated(reference);
       } else {
+        ref.read(facialReferenceProvider.notifier).store(reference);
         context.go(RouteConstants.home);
       }
     } on Object {

@@ -11,12 +11,15 @@ import 'package:cedsif_overtime_mobile/features/auth/presentation/services/facia
 import 'package:cedsif_overtime_mobile/features/auth/presentation/services/facial_verifier.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/logout_usecase.dart';
+import 'package:cedsif_overtime_mobile/features/auth/data/services/session_data_cleaner.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/widgets/session_menu_drawer.dart';
 import 'package:cedsif_overtime_mobile/features/history/presentation/pages/history_page.dart';
 import 'package:cedsif_overtime_mobile/features/home/presentation/pages/home_page.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/overtime_session.dart';
+import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/device_location.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/repositories/overtime_repository.dart';
+import 'package:cedsif_overtime_mobile/features/overtime/domain/repositories/location_repository.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/presentation/providers/overtime_provider.dart';
 import 'package:cedsif_overtime_mobile/widgets/app_button.dart';
 
@@ -29,7 +32,11 @@ class _MemoryOvertimeRepository implements OvertimeRepository {
       Right(OvertimeSnapshot(activeSession: active, history: List.of(history)));
 
   @override
-  Future<Either<Failure, OvertimeSession>> start(DateTime startedAt) async {
+  Future<Either<Failure, OvertimeSession>> start({
+    required DateTime startedAt,
+    required DeviceLocation location,
+    required String biometricReference,
+  }) async {
     active = OvertimeSession(
       id: 'demo',
       startedAt: startedAt,
@@ -62,10 +69,33 @@ class _SessionRefresh extends ChangeNotifier {
   void trigger() => notifyListeners();
 }
 
+class _ReadyLocationRepository implements LocationRepository {
+  @override
+  Future<Either<Failure, DeviceLocation>> current() async =>
+      Right<Failure, DeviceLocation>(
+        DeviceLocation(
+          latitude: -25.9692,
+          longitude: 32.5732,
+          accuracyMeters: 5,
+          capturedAt: DateTime(2026, 8, 13, 10),
+        ),
+      );
+}
+
+class _SeededFacialReferenceNotifier extends FacialReferenceNotifier {
+  @override
+  String? build() => 'SIMULATED-router-session';
+}
+
 class _FakeLogoutUseCase implements LogoutUseCase {
   @override
   Future<Either<Failure, Unit>> call() async =>
       const Right<Failure, Unit>(unit);
+}
+
+class _NoOpSessionDataCleaner implements SessionDataCleaner {
+  @override
+  Future<void> clear() async {}
 }
 
 class _ReadyFacialCamera implements FacialCamera {
@@ -94,19 +124,22 @@ Widget _buildFacialValidation(BuildContext context) => FacialValidationPage(
   simulationEnabled: true,
 );
 
-ProviderScope _testScope(Widget child, {OvertimeRepository? repository}) =>
-    ProviderScope(
-      overrides: [
-        overtimeRepositoryProvider.overrideWithValue(
-          repository ?? _MemoryOvertimeRepository(),
-        ),
-        overtimeClockProvider.overrideWithValue(
-          () => DateTime(2026, 8, 13, 10),
-        ),
-        logoutUseCaseProvider.overrideWithValue(_FakeLogoutUseCase()),
-      ],
-      child: child,
-    );
+ProviderScope _testScope(
+  Widget child, {
+  OvertimeRepository? repository,
+}) => ProviderScope(
+  overrides: [
+    overtimeRepositoryProvider.overrideWithValue(
+      repository ?? _MemoryOvertimeRepository(),
+    ),
+    overtimeClockProvider.overrideWithValue(() => DateTime(2026, 8, 13, 10)),
+    locationRepositoryProvider.overrideWithValue(_ReadyLocationRepository()),
+    facialReferenceProvider.overrideWith(_SeededFacialReferenceNotifier.new),
+    logoutUseCaseProvider.overrideWithValue(_FakeLogoutUseCase()),
+    sessionDataCleanerProvider.overrideWithValue(_NoOpSessionDataCleaner()),
+  ],
+  child: child,
+);
 
 void main() {
   Future<bool> validSession() async => true;

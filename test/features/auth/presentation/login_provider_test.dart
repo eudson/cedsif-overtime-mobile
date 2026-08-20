@@ -9,11 +9,14 @@ import 'package:mocktail/mocktail.dart';
 import 'package:cedsif_overtime_mobile/core/error/failures.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/login_usecase.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/logout_usecase.dart';
+import 'package:cedsif_overtime_mobile/features/auth/data/services/session_data_cleaner.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
 
 class _MockLoginUseCase extends Mock implements LoginUseCase {}
 
 class _MockLogoutUseCase extends Mock implements LogoutUseCase {}
+
+class _MockSessionDataCleaner extends Mock implements SessionDataCleaner {}
 
 void main() {
   late _MockLoginUseCase useCase;
@@ -27,6 +30,14 @@ void main() {
   });
 
   tearDown(() => container.dispose());
+
+  test('keeps the facial reference only in session memory', () {
+    container
+        .read(facialReferenceProvider.notifier)
+        .store('SIMULATED-reference-1');
+
+    expect(container.read(facialReferenceProvider), 'SIMULATED-reference-1');
+  });
 
   test('starts idle and exposes loading until login succeeds', () async {
     final completer = Completer<Either<Failure, Unit>>();
@@ -81,14 +92,20 @@ void main() {
 
   test('exposes logout progress and success', () async {
     final logoutUseCase = _MockLogoutUseCase();
+    final cleaner = _MockSessionDataCleaner();
     final completer = Completer<Either<Failure, Unit>>();
     when(logoutUseCase.call).thenAnswer((_) => completer.future);
+    when(cleaner.clear).thenAnswer((_) async {});
     final logoutContainer = ProviderContainer(
       overrides: <Override>[
         logoutUseCaseProvider.overrideWithValue(logoutUseCase),
+        sessionDataCleanerProvider.overrideWithValue(cleaner),
       ],
     );
     addTearDown(logoutContainer.dispose);
+    logoutContainer
+        .read(facialReferenceProvider.notifier)
+        .store('SIMULATED-reference-1');
 
     final operation = logoutContainer
         .read(logoutNotifierProvider.notifier)
@@ -99,6 +116,8 @@ void main() {
     expect(await operation, isTrue);
     expect(logoutContainer.read(logoutNotifierProvider).isLoading, isFalse);
     expect(logoutContainer.read(logoutNotifierProvider).errorKey, isNull);
+    expect(logoutContainer.read(facialReferenceProvider), isNull);
+    verify(cleaner.clear).called(1);
   });
 
   test('exposes logout failure for localized presentation', () async {

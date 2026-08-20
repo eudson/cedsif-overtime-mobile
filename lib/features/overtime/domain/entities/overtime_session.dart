@@ -9,6 +9,9 @@ class OvertimeSession extends Equatable {
     required this.status,
     this.endedAt,
     this.pausedDuration = Duration.zero,
+    this.startIdempotencyKey,
+    this.endIdempotencyKey,
+    this.submitIdempotencyKey,
   });
 
   final String id;
@@ -16,6 +19,9 @@ class OvertimeSession extends Equatable {
   final DateTime? endedAt;
   final OvertimeSessionStatus status;
   final Duration pausedDuration;
+  final String? startIdempotencyKey;
+  final String? endIdempotencyKey;
+  final String? submitIdempotencyKey;
 
   Duration durationAt(DateTime now) {
     final grossDuration = (endedAt ?? now).difference(startedAt);
@@ -33,6 +39,9 @@ class OvertimeSession extends Equatable {
       endedAt: end,
       status: OvertimeSessionStatus.reviewing,
       pausedDuration: pausedDuration,
+      startIdempotencyKey: startIdempotencyKey,
+      endIdempotencyKey: endIdempotencyKey,
+      submitIdempotencyKey: submitIdempotencyKey,
     );
   }
 
@@ -49,6 +58,9 @@ class OvertimeSession extends Equatable {
       pausedDuration:
           pausedDuration +
           (reviewDuration.isNegative ? Duration.zero : reviewDuration),
+      startIdempotencyKey: startIdempotencyKey,
+      endIdempotencyKey: endIdempotencyKey,
+      submitIdempotencyKey: submitIdempotencyKey,
     );
   }
 
@@ -62,11 +74,23 @@ class OvertimeSession extends Equatable {
       endedAt: endedAt,
       status: OvertimeSessionStatus.pending,
       pausedDuration: pausedDuration,
+      startIdempotencyKey: startIdempotencyKey,
+      endIdempotencyKey: endIdempotencyKey,
+      submitIdempotencyKey: submitIdempotencyKey,
     );
   }
 
   @override
-  List<Object?> get props => [id, startedAt, endedAt, status, pausedDuration];
+  List<Object?> get props => [
+    id,
+    startedAt,
+    endedAt,
+    status,
+    pausedDuration,
+    startIdempotencyKey,
+    endIdempotencyKey,
+    submitIdempotencyKey,
+  ];
 }
 
 class OvertimeSnapshot extends Equatable {

@@ -27,6 +27,9 @@ void main() {
       'startedAt': '2026-08-13T08:24:00.000',
       'endedAt': null,
       'status': 'active',
+      'startIdempotencyKey': 'start-1',
+      'endIdempotencyKey': 'end-1',
+      'submitIdempotencyKey': 'submit-1',
     });
 
     expect(
@@ -35,6 +38,9 @@ void main() {
         id: 'active-1',
         startedAt: DateTime(2026, 8, 13, 8, 24),
         status: OvertimeSessionStatus.active,
+        startIdempotencyKey: 'start-1',
+        endIdempotencyKey: 'end-1',
+        submitIdempotencyKey: 'submit-1',
       ),
     );
   });
@@ -44,6 +50,9 @@ void main() {
       id: 'active-1',
       startedAt: DateTime(2026, 8, 13, 8, 24),
       status: OvertimeSessionStatus.active,
+      startIdempotencyKey: 'start-1',
+      endIdempotencyKey: 'end-1',
+      submitIdempotencyKey: 'submit-1',
     );
     when(
       () => box.put(OvertimeLocalDataSource.activeSessionKey, any<dynamic>()),
@@ -62,6 +71,9 @@ void main() {
         'endedAt': null,
         'status': 'active',
         'pausedDurationSeconds': 0,
+        'startIdempotencyKey': 'start-1',
+        'endIdempotencyKey': 'end-1',
+        'submitIdempotencyKey': 'submit-1',
       }),
     ).called(1);
     verify(

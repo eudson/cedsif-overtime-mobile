@@ -6,6 +6,7 @@
     "invalidCredentials": "Invalid NUIT or password",
     "facialValidation": "Facial verification",
     "facialInstructions": "Position your face within the image and continue to simulate verification.",
+    "facialRequired": "Complete facial verification before starting overtime.",
     "simulateAndContinue": "Continue with simulation",
     "cameraUnavailable": "The camera could not be accessed. Check the permission and try again.",
     "verificationUnavailable": "Facial verification is unavailable in this environment until SCVD integration is complete.",

@@ -6,6 +6,7 @@
     "invalidCredentials": "NUIT o contraseña no válidos",
     "facialValidation": "Verificación facial",
     "facialInstructions": "Coloque el rostro dentro de la imagen y continúe para simular la verificación.",
+    "facialRequired": "Complete la verificación facial antes de iniciar las horas extra.",
     "simulateAndContinue": "Continuar con simulación",
     "cameraUnavailable": "No se pudo acceder a la cámara. Compruebe el permiso e inténtelo de nuevo.",
     "verificationUnavailable": "La verificación facial no está disponible en este entorno hasta que se complete la integración con SCVD.",

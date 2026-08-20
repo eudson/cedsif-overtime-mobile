@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cedsif_overtime_mobile/core/error/failures.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/logout_usecase.dart';
+import 'package:cedsif_overtime_mobile/features/auth/data/services/session_data_cleaner.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/widgets/session_menu_drawer.dart';
 import 'package:cedsif_overtime_mobile/theme/app_colors.dart';
@@ -17,6 +18,11 @@ import 'package:cedsif_overtime_mobile/theme/app_theme.dart';
 import 'package:cedsif_overtime_mobile/widgets/app_button.dart';
 
 class _MockLogoutUseCase extends Mock implements LogoutUseCase {}
+
+class _NoOpSessionDataCleaner implements SessionDataCleaner {
+  @override
+  Future<void> clear() async {}
+}
 
 class _MenuTranslationsLoader extends AssetLoader {
   const _MenuTranslationsLoader();
@@ -53,6 +59,9 @@ void main() {
       ProviderScope(
         overrides: <Override>[
           logoutUseCaseProvider.overrideWithValue(logoutUseCase),
+          sessionDataCleanerProvider.overrideWithValue(
+            _NoOpSessionDataCleaner(),
+          ),
         ],
         child: EasyLocalization(
           supportedLocales: const [Locale('pt')],

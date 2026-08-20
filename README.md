@@ -1,6 +1,8 @@
 # Horas Extras
 
-Horas Extras is the production Flutter mobile foundation for CEDSIF overtime workflows. This bootstrap establishes platform, architecture, storage, networking, localization, observability, and delivery conventions. It intentionally contains no overtime business rules yet.
+Horas Extras is the production Flutter mobile application for CEDSIF overtime
+workflows. It provides the platform foundation together with the authenticated,
+offline-first overtime registration lifecycle.
 
 ## Supported platforms
 
@@ -126,6 +128,10 @@ verifier in staging or production. Developers can enable or disable the flow by
 changing `ENV` in the selected `.env.dev` or ignored `.env.local` file and
 restarting the app.
 
+The resulting verification reference is kept in memory only and is cleared on
+logout or application restart. A new facial verification is therefore required
+for each application launch before an overtime registration can start.
+
 ### Location capture and geofence authority
 
 The application requests foreground location only when an overtime start needs
@@ -175,6 +181,20 @@ WorkManager is a non-critical bootstrap service. Initialization failures are iso
 
 WorkManager processes only generic, network-constrained queued requests. Networking injects secure credentials only for the configured first-party API origin, refreshes an expired session once, isolates cached GET responses by session scope and TTL, and never stores authorization values in cache keys or queued headers.
 
+### Offline overtime writes
+
+Starting overtime stores the client-generated entry ID and stable idempotency
+keys locally, then queues the API start request with the fresh facial reference
+and foreground coordinates. Stopping remains a local review action so the FAE
+can resume without requiring an unsupported backend reopen operation. Final
+submission queues the matching end request followed by the daily submission.
+
+The foreground processor attempts queued work immediately while online and
+whenever connectivity returns; WorkManager remains the periodic background
+fallback. Replay is FIFO and stops at the first retryable failure, preventing an
+end or submission from overtaking its start. The backend remains authoritative
+for geofence validation and overtime business rules.
+
 ### Authentication and offline sessions
 
 Login sends the FAE's NUIT and password to `POST /auth/login` through the auth
@@ -193,12 +213,10 @@ request.
 The hamburger menu exposes a confirmation-protected logout action. When online,
 the app revokes the refresh session through `POST /auth/logout` before clearing
 local credentials. Offline logout still clears local credentials immediately;
-unsynchronized overtime data is retained, while remote revocation relies on the
-refresh session's server-side expiry.
-
-**CEDSIF discussion item:** the current delivery assumes one FAE per app
-installation. Before supporting shared devices, queued writes must be bound to
-the originating FAE so a later login cannot replay another FAE's pending work.
+the session-scoped GET cache, queued writes, overtime records, and in-memory
+facial reference are also cleared so another FAE can never replay or view the
+previous FAE's data. Remote revocation relies on the refresh session's
+server-side expiry when logout occurs offline.
 
 **CEDSIF discussion item — not implemented:** CEDSIF may consider allowing a
 separate, longer offline-login window using a salted password-derived verifier
@@ -206,9 +224,12 @@ stored in hardware-backed secure storage. That option requires explicit
 agreement on its offline TTL, failed-attempt lockout, credential-revocation
 behavior, device-compromise risk, and audit requirements before implementation.
 
-## Bootstrap scope
+## Product scope
 
-The current home feature is a neutral architecture proof that renders localized placeholder content. No employee, timesheet, overtime-rate, approval, payroll, attendance, or calculation policy has been assumed.
+The current overtime lifecycle deliberately contains no client-defined limits,
+rates, approval routing, payroll, attendance, or calculation policy. Those
+rules remain backend-owned and will be introduced only from approved CEDSIF
+requirements.
 
 This repository also excludes unrelated product domains such as payments, point-of-sale, checkout, inventory, ecommerce, banking, lending, and accounting. Business behavior will be introduced only from approved CEDSIF requirements.
 
@@ -219,7 +240,7 @@ The generic application bootstrap is complete. The following external release an
 - [ ] Install or repair the iOS 26.2 platform component in the active Xcode installation, then verify `make build-ios`.
 - [ ] Configure Android production signing through the approved secure release pipeline; local release builds currently use debug signing.
 - [ ] Replace the placeholder `API_BASE_URL` in the target environment files after the backend endpoint is approved.
-- [ ] Implement overtime workflows only after CEDSIF supplies and approves the business requirements.
+- [ ] Replace the temporary facial-verification simulation with backend-to-SCVD verification.
 
 ## Repository policy
 

@@ -4,6 +4,7 @@ import 'package:cedsif_overtime_mobile/core/config/providers.dart';
 import 'package:cedsif_overtime_mobile/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:cedsif_overtime_mobile/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:cedsif_overtime_mobile/features/auth/data/services/auth_session_service.dart';
+import 'package:cedsif_overtime_mobile/features/auth/data/services/session_data_cleaner.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/login_usecase.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/logout_usecase.dart';
@@ -14,6 +15,20 @@ class LoginState {
   final bool isLoading;
   final String? errorKey;
 }
+
+class FacialReferenceNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void store(String reference) => state = reference;
+
+  void clear() => state = null;
+}
+
+final facialReferenceProvider =
+    NotifierProvider<FacialReferenceNotifier, String?>(
+      FacialReferenceNotifier.new,
+    );
 
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>(
   (ref) => DioAuthRemoteDataSource(ref.watch(dioProvider)),
@@ -36,6 +51,14 @@ final logoutUseCaseProvider = Provider<LogoutUseCase>(
 
 final authSessionServiceProvider = Provider<AuthSessionService>(
   (ref) => AuthSessionService(ref.watch(secureStorageProvider)),
+);
+
+final sessionDataCleanerProvider = Provider<SessionDataCleaner>(
+  (ref) => LocalSessionDataCleaner(
+    cacheBox: ref.watch(cacheBoxProvider),
+    pendingRequestsBox: ref.watch(pendingRequestsBoxProvider),
+    overtimeBox: ref.watch(overtimeBoxProvider),
+  ),
 );
 
 class LoginNotifier extends Notifier<LoginState> {
@@ -85,16 +108,20 @@ class LogoutNotifier extends Notifier<LogoutState> {
     }
     state = const LogoutState(isLoading: true);
     final result = await ref.read(logoutUseCaseProvider)();
-    return result.fold(
-      (failure) {
-        state = LogoutState(errorKey: failure.message);
-        return false;
-      },
-      (_) {
-        state = const LogoutState();
-        return true;
-      },
-    );
+    final failure = result.getLeft().toNullable();
+    if (failure != null) {
+      state = LogoutState(errorKey: failure.message);
+      return false;
+    }
+    try {
+      await ref.read(sessionDataCleanerProvider).clear();
+    } on Object {
+      state = const LogoutState(errorKey: 'errors.generic');
+      return false;
+    }
+    ref.read(facialReferenceProvider.notifier).clear();
+    state = const LogoutState();
+    return true;
   }
 }
 

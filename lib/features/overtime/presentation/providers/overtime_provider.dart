@@ -1,10 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:cedsif_overtime_mobile/core/config/providers.dart';
+import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/datasources/location_data_source.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/datasources/overtime_local_datasource.dart';
+import 'package:cedsif_overtime_mobile/features/overtime/data/datasources/overtime_pending_request_datasource.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/datasources/overtime_remote_datasource.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/repositories/location_repository_impl.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/repositories/overtime_repository_impl.dart';
@@ -24,6 +27,13 @@ final overtimeRemoteDataSourceProvider = Provider<OvertimeRemoteDataSource>(
   (ref) => DioOvertimeRemoteDataSource(ref.watch(dioProvider)),
 );
 
+final overtimePendingRequestDataSourceProvider =
+    Provider<OvertimePendingRequestDataSource>(
+      (ref) => OvertimePendingRequestDataSource(
+        ref.watch(pendingRequestsBoxProvider),
+      ),
+    );
+
 final locationPlatformProvider = Provider<LocationPlatform>(
   (ref) => const PluginLocationPlatform(),
 );
@@ -37,7 +47,12 @@ final locationRepositoryProvider = Provider<LocationRepository>(
 );
 
 final overtimeRepositoryProvider = Provider<OvertimeRepository>(
-  (ref) => OvertimeRepositoryImpl(ref.watch(overtimeLocalDataSourceProvider)),
+  (ref) => OvertimeRepositoryImpl(
+    ref.watch(overtimeLocalDataSourceProvider),
+    pendingDataSource: ref.watch(overtimePendingRequestDataSourceProvider),
+    idFactory: const Uuid().v4,
+    triggerSync: ref.watch(foregroundSyncCoordinatorProvider).requestSync,
+  ),
 );
 
 class OvertimeState {
@@ -125,9 +140,29 @@ class OvertimeNotifier extends Notifier<OvertimeState> {
     if (!state.isLoaded || state.isSaving || state.activeSession != null) {
       return;
     }
+    final biometricReference = ref.read(facialReferenceProvider);
+    if (biometricReference == null) {
+      state = state.copyWith(errorKey: 'auth.facialRequired');
+      return;
+    }
     final now = ref.read(overtimeClockProvider)();
     state = state.copyWith(isSaving: true, errorKey: null, now: now);
-    final result = await ref.read(overtimeRepositoryProvider).start(now);
+    final locationResult = await ref.read(locationRepositoryProvider).current();
+    final location = locationResult.getRight().toNullable();
+    if (location == null) {
+      state = state.copyWith(
+        isSaving: false,
+        errorKey: locationResult.getLeft().toNullable()?.message,
+      );
+      return;
+    }
+    final result = await ref
+        .read(overtimeRepositoryProvider)
+        .start(
+          startedAt: now,
+          location: location,
+          biometricReference: biometricReference,
+        );
     result.fold(
       (failure) =>
           state = state.copyWith(isSaving: false, errorKey: failure.message),

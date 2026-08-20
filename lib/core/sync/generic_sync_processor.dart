@@ -59,6 +59,7 @@ class GenericSyncProcessor {
           case PendingRequestOutcome.retry:
             allSucceeded = false;
             await _markForRetry(entry.key, request);
+            return false;
           case PendingRequestOutcome.permanentRejection:
             allSucceeded = false;
             await _pendingRequestsBox.delete(entry.key);
@@ -66,6 +67,7 @@ class GenericSyncProcessor {
       } on Object {
         allSucceeded = false;
         await _markForRetry(entry.key, request);
+        return false;
       }
     }
 

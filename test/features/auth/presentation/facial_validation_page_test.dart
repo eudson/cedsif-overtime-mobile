@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:cedsif_overtime_mobile/core/config/environment_config.dart';
+import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/facial_validation_page.dart';
+import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/services/facial_camera.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/services/facial_verifier.dart';
 import 'package:cedsif_overtime_mobile/widgets/app_button.dart';
@@ -94,6 +98,44 @@ void main() {
       expect(reference, 'SIMULATED-verification-1');
     },
   );
+
+  testWidgets('stores the reference before opening Home', (tester) async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final router = GoRouter(
+      initialLocation: RouteConstants.facialValidation,
+      routes: [
+        GoRoute(
+          path: RouteConstants.facialValidation,
+          builder: (context, state) => FacialValidationPage(
+            camera: _FakeFacialCamera(),
+            verifier: _FakeFacialVerifier(),
+            simulationEnabled: true,
+          ),
+        ),
+        GoRoute(
+          path: RouteConstants.home,
+          builder: (context, state) =>
+              const Scaffold(body: SizedBox(key: Key('home-destination'))),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byType(AppButton));
+    await tester.tap(find.byType(AppButton));
+    await tester.pumpAndSettle();
+
+    expect(container.read(facialReferenceProvider), 'SIMULATED-verification-1');
+    expect(find.byKey(const Key('home-destination')), findsOneWidget);
+  });
 
   testWidgets('fails closed without initializing camera outside development', (
     tester,

@@ -45,6 +45,9 @@ class OvertimeLocalDataSource {
     'endedAt': session.endedAt?.toIso8601String(),
     'status': session.status.name,
     'pausedDurationSeconds': session.pausedDuration.inSeconds,
+    'startIdempotencyKey': session.startIdempotencyKey,
+    'endIdempotencyKey': session.endIdempotencyKey,
+    'submitIdempotencyKey': session.submitIdempotencyKey,
   };
 
   static OvertimeSession _decode(dynamic value) {
@@ -59,6 +62,9 @@ class OvertimeLocalDataSource {
       pausedDuration: Duration(
         seconds: (map['pausedDurationSeconds'] as num?)?.toInt() ?? 0,
       ),
+      startIdempotencyKey: map['startIdempotencyKey'] as String?,
+      endIdempotencyKey: map['endIdempotencyKey'] as String?,
+      submitIdempotencyKey: map['submitIdempotencyKey'] as String?,
     );
   }
 }

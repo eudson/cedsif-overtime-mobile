@@ -6,26 +6,56 @@ import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cedsif_overtime_mobile/core/error/failures.dart';
+import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
+import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/device_location.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/overtime_session.dart';
+import 'package:cedsif_overtime_mobile/features/overtime/domain/repositories/location_repository.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/repositories/overtime_repository.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/presentation/providers/overtime_provider.dart';
 
 class _MockOvertimeRepository extends Mock implements OvertimeRepository {}
 
+class _MockLocationRepository extends Mock implements LocationRepository {}
+
 void main() {
   late _MockOvertimeRepository repository;
+  late _MockLocationRepository locationRepository;
+  late DeviceLocation location;
   late DateTime now;
   late ProviderContainer container;
 
+  setUpAll(() {
+    registerFallbackValue(
+      DeviceLocation(
+        latitude: 0,
+        longitude: 0,
+        accuracyMeters: 0,
+        capturedAt: DateTime.utc(2026),
+      ),
+    );
+  });
+
   setUp(() {
     repository = _MockOvertimeRepository();
+    locationRepository = _MockLocationRepository();
     now = DateTime(2026, 8, 13, 10);
+    location = DeviceLocation(
+      latitude: -25.9692,
+      longitude: 32.5732,
+      accuracyMeters: 5,
+      capturedAt: now,
+    );
+    when(
+      locationRepository.current,
+    ).thenAnswer((_) async => Right<Failure, DeviceLocation>(location));
     container = ProviderContainer(
       overrides: [
         overtimeRepositoryProvider.overrideWithValue(repository),
+        locationRepositoryProvider.overrideWithValue(locationRepository),
         overtimeClockProvider.overrideWithValue(() => now),
       ],
     );
+    container.read(facialReferenceProvider.notifier).store('face-1');
     addTearDown(container.dispose);
   });
 
@@ -56,7 +86,11 @@ void main() {
       status: OvertimeSessionStatus.active,
     );
     when(
-      () => repository.start(now),
+      () => repository.start(
+        startedAt: now,
+        location: location,
+        biometricReference: 'face-1',
+      ),
     ).thenAnswer((_) async => Right<Failure, OvertimeSession>(started));
     when(repository.load).thenAnswer(
       (_) async =>
@@ -68,7 +102,13 @@ void main() {
 
     expect(container.read(overtimeProvider).activeSession, started);
     expect(container.read(overtimeProvider).isSaving, isFalse);
-    verify(() => repository.start(now)).called(1);
+    verify(
+      () => repository.start(
+        startedAt: now,
+        location: location,
+        biometricReference: 'face-1',
+      ),
+    ).called(1);
   });
 
   test('pause freezes counting and enters review state', () async {
@@ -163,7 +203,13 @@ void main() {
           OvertimeSnapshot(history: []),
         ),
       );
-      when(() => repository.start(now)).thenAnswer(
+      when(
+        () => repository.start(
+          startedAt: now,
+          location: location,
+          biometricReference: 'face-1',
+        ),
+      ).thenAnswer(
         (_) async => const Left<Failure, OvertimeSession>(
           CacheFailure('errors.generic'),
         ),
@@ -188,11 +234,60 @@ void main() {
     final loading = notifier.load();
     await notifier.start();
 
-    verifyNever(() => repository.start(any()));
+    verifyNever(
+      () => repository.start(
+        startedAt: any(named: 'startedAt'),
+        location: any(named: 'location'),
+        biometricReference: any(named: 'biometricReference'),
+      ),
+    );
     pendingLoad.complete(
       const Right<Failure, OvertimeSnapshot>(OvertimeSnapshot(history: [])),
     );
     await loading;
     expect(container.read(overtimeProvider).isLoaded, isTrue);
+  });
+
+  test('requires this-launch facial verification before location', () async {
+    container.read(facialReferenceProvider.notifier).clear();
+    when(repository.load).thenAnswer(
+      (_) async =>
+          const Right<Failure, OvertimeSnapshot>(OvertimeSnapshot(history: [])),
+    );
+    final notifier = container.read(overtimeProvider.notifier);
+    await notifier.load();
+
+    await notifier.start();
+
+    expect(container.read(overtimeProvider).errorKey, 'auth.facialRequired');
+    verifyNever(locationRepository.current);
+  });
+
+  test('surfaces location failure without starting overtime', () async {
+    when(locationRepository.current).thenAnswer(
+      (_) async => const Left<Failure, DeviceLocation>(
+        ValidationFailure('location.permissionDenied'),
+      ),
+    );
+    when(repository.load).thenAnswer(
+      (_) async =>
+          const Right<Failure, OvertimeSnapshot>(OvertimeSnapshot(history: [])),
+    );
+    final notifier = container.read(overtimeProvider.notifier);
+    await notifier.load();
+
+    await notifier.start();
+
+    expect(
+      container.read(overtimeProvider).errorKey,
+      'location.permissionDenied',
+    );
+    verifyNever(
+      () => repository.start(
+        startedAt: any(named: 'startedAt'),
+        location: any(named: 'location'),
+        biometricReference: any(named: 'biometricReference'),
+      ),
+    );
   });
 }

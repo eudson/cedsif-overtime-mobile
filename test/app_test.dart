@@ -12,6 +12,7 @@ import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
 import 'package:cedsif_overtime_mobile/core/error/failures.dart';
 import 'package:cedsif_overtime_mobile/core/network/auth_event_bus.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/overtime_session.dart';
+import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/device_location.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/repositories/overtime_repository.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/presentation/providers/overtime_provider.dart';
 
@@ -21,14 +22,17 @@ class _FakeOvertimeRepository implements OvertimeRepository {
       const Right(OvertimeSnapshot(history: []));
 
   @override
-  Future<Either<Failure, OvertimeSession>> start(DateTime startedAt) async =>
-      Right(
-        OvertimeSession(
-          id: 'fake',
-          startedAt: startedAt,
-          status: OvertimeSessionStatus.active,
-        ),
-      );
+  Future<Either<Failure, OvertimeSession>> start({
+    required DateTime startedAt,
+    required DeviceLocation location,
+    required String biometricReference,
+  }) async => Right(
+    OvertimeSession(
+      id: 'fake',
+      startedAt: startedAt,
+      status: OvertimeSessionStatus.active,
+    ),
+  );
 
   @override
   Future<Either<Failure, OvertimeSession>> pause(DateTime pausedAt) async =>

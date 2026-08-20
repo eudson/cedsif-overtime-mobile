@@ -116,6 +116,37 @@ void main() {
     ).called(1);
   });
 
+  test('stops the FIFO pass after the first retry', () async {
+    const first = <String, Object?>{
+      'method': 'POST',
+      'path': '/first',
+      'headers': <String, Object?>{'Idempotency-Key': 'first'},
+      'retryCount': 0,
+    };
+    const second = <String, Object?>{
+      'method': 'POST',
+      'path': '/second',
+      'headers': <String, Object?>{'Idempotency-Key': 'second'},
+      'retryCount': 0,
+    };
+    when(
+      () => queue.toMap(),
+    ).thenReturn(<dynamic, dynamic>{'first': first, 'second': second});
+    when(
+      () => handler.process(first),
+    ).thenAnswer((_) async => PendingRequestOutcome.retry);
+    when(() => queue.put('first', any<dynamic>())).thenAnswer((_) async {});
+
+    final result = await GenericSyncProcessor(
+      pendingRequestsBox: queue,
+      handler: handler,
+    ).processPendingRequests();
+
+    expect(result, isFalse);
+    verify(() => handler.process(first)).called(1);
+    verifyNever(() => handler.process(second));
+  });
+
   test(
     'retains requests and reports failure when the handler throws',
     () async {
