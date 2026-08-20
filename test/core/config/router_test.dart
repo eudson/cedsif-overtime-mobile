@@ -21,6 +21,10 @@ import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/device_
 import 'package:cedsif_overtime_mobile/features/overtime/domain/repositories/overtime_repository.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/repositories/location_repository.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/presentation/providers/overtime_provider.dart';
+import 'package:cedsif_overtime_mobile/features/profile/domain/entities/employee_profile.dart';
+import 'package:cedsif_overtime_mobile/features/profile/domain/repositories/profile_repository.dart';
+import 'package:cedsif_overtime_mobile/features/profile/presentation/pages/profile_page.dart';
+import 'package:cedsif_overtime_mobile/features/profile/presentation/providers/profile_provider.dart';
 import 'package:cedsif_overtime_mobile/widgets/app_button.dart';
 
 class _MemoryOvertimeRepository implements OvertimeRepository {
@@ -96,6 +100,22 @@ class _FakeLogoutUseCase implements LogoutUseCase {
 class _NoOpSessionDataCleaner implements SessionDataCleaner {
   @override
   Future<void> clear() async {}
+
+  @override
+  Future<void> claimSubject(String subject) async {}
+}
+
+class _ReadyProfileRepository implements ProfileRepository {
+  @override
+  Future<Either<Failure, EmployeeProfile>> get() async =>
+      const Right<Failure, EmployeeProfile>(
+        EmployeeProfile(
+          id: 'employee-id',
+          nuit: '123456789',
+          firstName: 'Maria',
+          lastName: 'Mabunda',
+        ),
+      );
 }
 
 class _ReadyFacialCamera implements FacialCamera {
@@ -137,6 +157,7 @@ ProviderScope _testScope(
     facialReferenceProvider.overrideWith(_SeededFacialReferenceNotifier.new),
     logoutUseCaseProvider.overrideWithValue(_FakeLogoutUseCase()),
     sessionDataCleanerProvider.overrideWithValue(_NoOpSessionDataCleaner()),
+    profileRepositoryProvider.overrideWithValue(_ReadyProfileRepository()),
   ],
   child: child,
 );
@@ -220,11 +241,13 @@ void main() {
     tester,
   ) async {
     var valid = true;
+    var invalidations = 0;
     final refresh = _SessionRefresh();
     final router = createAppRouter(
       initialLocation: RouteConstants.home,
       hasValidSession: () async => valid,
       sessionRefresh: refresh,
+      onSessionInvalidated: () async => invalidations++,
     );
     addTearDown(router.dispose);
     addTearDown(refresh.dispose);
@@ -241,11 +264,10 @@ void main() {
 
     expect(router.state.uri.path, RouteConstants.login);
     expect(find.byType(LoginPage), findsOneWidget);
+    expect(invalidations, 1);
   });
 
-  testWidgets('exposes facial-validation and Home destinations', (
-    tester,
-  ) async {
+  testWidgets('exposes authenticated application destinations', (tester) async {
     final router = createAppRouter(
       initialLocation: RouteConstants.login,
       hasValidSession: validSession,
@@ -267,6 +289,10 @@ void main() {
     router.go(RouteConstants.history);
     await tester.pumpAndSettle();
     expect(find.byType(HistoryPage), findsOneWidget);
+
+    router.go(RouteConstants.profile);
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfilePage), findsOneWidget);
   });
 
   testWidgets('facial-validation Continue action opens Home', (tester) async {
@@ -293,7 +319,7 @@ void main() {
     expect(find.byType(HomePage), findsOneWidget);
   });
 
-  testWidgets('bottom navigation moves between Home and History', (
+  testWidgets('bottom navigation moves between Home, History, and Profile', (
     tester,
   ) async {
     final router = createAppRouter(
@@ -316,6 +342,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(router.state.uri.path, RouteConstants.home);
     expect(find.byType(HomePage), findsOneWidget);
+
+    await tester.tap(find.text('navigation.profile'));
+    await tester.pumpAndSettle();
+    expect(router.state.uri.path, RouteConstants.profile);
+    expect(find.byType(ProfilePage), findsOneWidget);
   });
 
   testWidgets('stop opens review and submit persists a pending History entry', (

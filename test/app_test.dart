@@ -15,6 +15,11 @@ import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/overtim
 import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/device_location.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/repositories/overtime_repository.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/presentation/providers/overtime_provider.dart';
+import 'package:cedsif_overtime_mobile/features/profile/domain/entities/employee_profile.dart';
+import 'package:cedsif_overtime_mobile/features/profile/domain/repositories/profile_repository.dart';
+import 'package:cedsif_overtime_mobile/features/profile/presentation/providers/profile_provider.dart';
+import 'package:cedsif_overtime_mobile/features/auth/data/services/session_data_cleaner.dart';
+import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
 
 class _FakeOvertimeRepository implements OvertimeRepository {
   @override
@@ -47,6 +52,29 @@ class _FakeOvertimeRepository implements OvertimeRepository {
       const Right(OvertimeSnapshot(history: []));
 }
 
+class _FakeProfileRepository implements ProfileRepository {
+  @override
+  Future<Either<Failure, EmployeeProfile>> get() async =>
+      const Right<Failure, EmployeeProfile>(
+        EmployeeProfile(
+          id: 'employee-id',
+          nuit: '123456789',
+          firstName: 'Ana',
+          lastName: 'Mucavele',
+        ),
+      );
+}
+
+class _TrackingSessionDataCleaner implements SessionDataCleaner {
+  int clearCount = 0;
+
+  @override
+  Future<void> clear() async => clearCount++;
+
+  @override
+  Future<void> claimSubject(String subject) async {}
+}
+
 void main() {
   setUpAll(() async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -57,6 +85,7 @@ void main() {
     tester,
   ) async {
     final eventBus = AuthEventBus();
+    final cleaner = _TrackingSessionDataCleaner();
     final router = createAppRouter(
       initialLocation: RouteConstants.home,
       hasValidSession: () async => true,
@@ -76,6 +105,10 @@ void main() {
             overtimeRepositoryProvider.overrideWithValue(
               _FakeOvertimeRepository(),
             ),
+            profileRepositoryProvider.overrideWithValue(
+              _FakeProfileRepository(),
+            ),
+            sessionDataCleanerProvider.overrideWithValue(cleaner),
           ],
           child: const HorasExtrasApp(),
         ),
@@ -88,5 +121,6 @@ void main() {
     await tester.pump();
 
     expect(router.state.uri.path, RouteConstants.splash);
+    expect(cleaner.clearCount, 0);
   });
 }

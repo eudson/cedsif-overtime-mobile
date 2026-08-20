@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cedsif_overtime_mobile/core/config/providers.dart';
+import 'package:cedsif_overtime_mobile/core/auth/authenticated_subject.dart';
+import 'package:cedsif_overtime_mobile/core/auth/session_scope.dart';
 import 'package:cedsif_overtime_mobile/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:cedsif_overtime_mobile/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:cedsif_overtime_mobile/features/auth/data/services/auth_session_service.dart';
@@ -18,7 +20,10 @@ class LoginState {
 
 class FacialReferenceNotifier extends Notifier<String?> {
   @override
-  String? build() => null;
+  String? build() {
+    ref.watch(sessionEpochProvider);
+    return null;
+  }
 
   void store(String reference) => state = reference;
 
@@ -60,6 +65,21 @@ final sessionDataCleanerProvider = Provider<SessionDataCleaner>(
   ),
 );
 
+final sessionDataResetCoordinatorProvider =
+    Provider<SessionDataResetCoordinator>(
+      (ref) =>
+          SessionDataResetCoordinator(ref.watch(sessionDataCleanerProvider)),
+    );
+
+typedef AuthenticatedSubjectReader = Future<String?> Function();
+
+final authenticatedSubjectReaderProvider = Provider<AuthenticatedSubjectReader>(
+  (ref) {
+    final secureStorage = ref.watch(secureStorageProvider);
+    return () => AuthenticatedSubject.read(secureStorage);
+  },
+);
+
 class LoginNotifier extends Notifier<LoginState> {
   @override
   LoginState build() => const LoginState();
@@ -73,17 +93,26 @@ class LoginNotifier extends Notifier<LoginState> {
       nuit: nuit,
       password: password,
     );
-    return result.fold(
-      (failure) {
-        state = LoginState(errorKey: failure.message);
-        return false;
-      },
-      (_) {
-        state = const LoginState();
-        ref.read(foregroundSyncCoordinatorProvider).requestSync();
-        return true;
-      },
-    );
+    final failure = result.getLeft().toNullable();
+    if (failure != null) {
+      state = LoginState(errorKey: failure.message);
+      return false;
+    }
+    try {
+      final subject = await ref.read(authenticatedSubjectReaderProvider)();
+      if (subject == null) {
+        throw const FormatException('Authenticated token has no subject');
+      }
+      await ref.read(sessionDataResetCoordinatorProvider).claimSubject(subject);
+    } on Object {
+      await ref.read(secureStorageProvider).clearTokens();
+      state = const LoginState(errorKey: 'errors.generic');
+      return false;
+    }
+    state = const LoginState();
+    ref.read(sessionEpochProvider.notifier).advance();
+    ref.read(foregroundSyncCoordinatorProvider).requestSync();
+    return true;
   }
 }
 
@@ -114,12 +143,12 @@ class LogoutNotifier extends Notifier<LogoutState> {
       return false;
     }
     try {
-      await ref.read(sessionDataCleanerProvider).clear();
+      await ref.read(sessionDataResetCoordinatorProvider).clear();
     } on Object {
       state = const LogoutState(errorKey: 'errors.generic');
       return false;
     }
-    ref.read(facialReferenceProvider.notifier).clear();
+    ref.read(sessionEpochProvider.notifier).advance();
     state = const LogoutState();
     return true;
   }

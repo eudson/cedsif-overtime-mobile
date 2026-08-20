@@ -1,8 +1,16 @@
 {
   "app": {
-    "title": "Horas Extras"
+    "title": "Portal de Horas Extra",
+    "emblem": "Emblema de la República de Mozambique"
   },
   "auth": {
+    "subtitle": "Registro de horas extraordinarias",
+    "nuit": "NUIT",
+    "password": "Contraseña",
+    "enter": "Iniciar sesión",
+    "forgotPassword": "¿Olvidó su contraseña?",
+    "required": "Campo obligatorio",
+    "invalidNuit": "Introduzca un NUIT válido de 9 dígitos",
     "invalidCredentials": "NUIT o contraseña no válidos",
     "facialValidation": "Verificación facial",
     "facialInstructions": "Coloque el rostro dentro de la imagen y continúe para simular la verificación.",
@@ -17,7 +25,24 @@
     "logoutConfirmMessage": "Tendrá que iniciar sesión de nuevo para continuar."
   },
   "home": {
-    "placeholder": "Inicio"
+    "placeholder": "Inicio",
+    "greeting": "Buenos días,",
+    "identity": "NUIT {nuit}",
+    "identityWithWorkUnit": "NUIT {nuit} · {workUnit}",
+    "insidePerimeter": "Dentro del perímetro",
+    "online": "En línea",
+    "notStarted": "Aún no ha iniciado el conteo de hoy",
+    "start": "Iniciar",
+    "inProgress": "EN CURSO",
+    "plannedDuration": "de 04:00 previstas",
+    "startedAt": "Inicio {time} · {name}",
+    "stop": "Terminar conteo",
+    "submitAfterStop": "El envío a e-SNGRHE estará disponible después de terminar",
+    "insidePerimeterRunning": "Dentro del perímetro",
+    "onlineUpper": "EN LÍNEA"
+  },
+  "history": {
+    "title": "Historial"
   },
   "location": {
     "servicesDisabled": "Active los servicios de ubicación e inténtelo de nuevo.",
@@ -34,6 +59,40 @@
     "registeredTime": "Tiempo registrado",
     "submit": "Enviar a e-SNGRHE",
     "resume": "Reanudar conteo"
+  },
+  "overtime": {
+    "conflictingActiveSession": "Se encontró otro conteo activo en el servidor. Manténgase en línea y contacte con soporte antes de continuar."
+  },
+  "navigation": {
+    "home": "Inicio",
+    "history": "Historial",
+    "profile": "Perfil",
+    "menu": "Menú"
+  },
+  "profile": {
+    "title": "Perfil",
+    "nuit": "NUIT",
+    "workUnit": "Unidad de trabajo",
+    "workUnitReference": "Referencia de la UGB",
+    "unassigned": "Sin asignar"
+  },
+  "status": {
+    "inProgress": "En curso",
+    "approved": "Aprobada",
+    "pending": "Pendiente",
+    "blocked": "Bloqueado",
+    "offline": "Sin conexión"
+  },
+  "calendar": {
+    "months": {
+      "1": "Ene", "2": "Feb", "3": "Mar", "4": "Abr",
+      "5": "May", "6": "Jun", "7": "Jul", "8": "Ago",
+      "9": "Sep", "10": "Oct", "11": "Nov", "12": "Dic"
+    },
+    "weekdays": {
+      "1": "Lun", "2": "Mar", "3": "Mié", "4": "Jue",
+      "5": "Vie", "6": "Sáb", "7": "Dom"
+    }
   },
   "common": {
     "retry": "Reintentar",

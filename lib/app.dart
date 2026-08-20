@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cedsif_overtime_mobile/core/branding/branding_providers.dart';
+import 'package:cedsif_overtime_mobile/core/auth/session_scope.dart';
 import 'package:cedsif_overtime_mobile/core/config/providers.dart';
 import 'package:cedsif_overtime_mobile/core/config/router.dart';
 import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
@@ -33,6 +34,7 @@ class _HorasExtrasAppState extends ConsumerState<HorasExtrasApp> {
     if (!mounted || event != AuthEvent.sessionExpired) {
       return;
     }
+    ref.read(sessionEpochProvider.notifier).advance();
     ref.read(routerProvider).go(RouteConstants.splash);
   }
 

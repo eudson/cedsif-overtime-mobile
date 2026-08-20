@@ -5,13 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
+import 'package:cedsif_overtime_mobile/core/auth/session_scope.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/facial_validation_page.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/presentation/pages/overtime_history_route.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/presentation/pages/overtime_home_route.dart';
+import 'package:cedsif_overtime_mobile/features/profile/presentation/pages/profile_route.dart';
 
 typedef SessionValidator = Future<bool> Function();
+typedef SessionInvalidationHandler = Future<void> Function();
 typedef FacialValidationBuilder = Widget Function(BuildContext context);
 
 final class SessionExpiryRefresh extends ChangeNotifier {
@@ -61,16 +64,27 @@ Future<String?> appRedirect(
 GoRouter createAppRouter({
   String initialLocation = RouteConstants.splash,
   SessionValidator? hasValidSession,
+  SessionInvalidationHandler? onSessionInvalidated,
   Listenable? sessionRefresh,
   FacialValidationBuilder? facialValidationBuilder,
 }) {
   final validateSession = hasValidSession ?? () async => false;
+  var hadValidSession = false;
+  Future<bool> validateTrackedSession() async {
+    final isValid = await validateSession();
+    if (!isValid && hadValidSession) {
+      await onSessionInvalidated?.call();
+    }
+    hadValidSession = isValid;
+    return isValid;
+  }
+
   final buildFacialValidation =
       facialValidationBuilder ?? (_) => const FacialValidationPage();
   return GoRouter(
     initialLocation: initialLocation,
     redirect: (context, state) =>
-        appRedirect(context, state, hasValidSession: validateSession),
+        appRedirect(context, state, hasValidSession: validateTrackedSession),
     refreshListenable: sessionRefresh,
     routes: <RouteBase>[
       GoRoute(
@@ -89,12 +103,21 @@ GoRouter createAppRouter({
         path: RouteConstants.home,
         builder: (context, state) => OvertimeHomeRoute(
           onHistorySelected: () => context.go(RouteConstants.history),
+          onProfileSelected: () => context.go(RouteConstants.profile),
         ),
       ),
       GoRoute(
         path: RouteConstants.history,
         builder: (context, state) => OvertimeHistoryRoute(
           onHomeSelected: () => context.go(RouteConstants.home),
+          onProfileSelected: () => context.go(RouteConstants.profile),
+        ),
+      ),
+      GoRoute(
+        path: RouteConstants.profile,
+        builder: (context, state) => ProfileRoute(
+          onHomeSelected: () => context.go(RouteConstants.home),
+          onHistorySelected: () => context.go(RouteConstants.history),
         ),
       ),
     ],
@@ -112,6 +135,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   final router = createAppRouter(
     hasValidSession: validateSession,
+    onSessionInvalidated: () async {
+      ref.read(sessionEpochProvider.notifier).advance();
+    },
     sessionRefresh: sessionRefresh,
   );
   ref.onDispose(() {

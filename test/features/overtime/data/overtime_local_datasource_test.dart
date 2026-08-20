@@ -170,4 +170,41 @@ void main() {
       expect(history, [retry]);
     },
   );
+
+  test('replaces history with a normalized synchronized snapshot', () async {
+    when(
+      () => box.put(OvertimeLocalDataSource.historyKey, any<dynamic>()),
+    ).thenAnswer((_) async {});
+    final older = OvertimeSession(
+      id: 'older',
+      startedAt: DateTime.utc(2026, 8, 10, 18),
+      endedAt: DateTime.utc(2026, 8, 10, 19),
+      status: OvertimeSessionStatus.pending,
+    );
+    final newer = OvertimeSession(
+      id: 'newer',
+      startedAt: DateTime.utc(2026, 8, 20, 18),
+      endedAt: DateTime.utc(2026, 8, 20, 19),
+      status: OvertimeSessionStatus.pending,
+    );
+
+    final result = await dataSource.replaceHistory(<OvertimeSession>[
+      older,
+      newer,
+    ]);
+
+    expect(result, <OvertimeSession>[newer, older]);
+    final saved =
+        verify(
+              () => box.put(
+                OvertimeLocalDataSource.historyKey,
+                captureAny<dynamic>(),
+              ),
+            ).captured.single
+            as List<dynamic>;
+    expect(
+      saved.map((entry) => (entry as Map<dynamic, dynamic>)['id']),
+      <String>['newer', 'older'],
+    );
+  });
 }

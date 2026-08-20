@@ -39,6 +39,15 @@ class OvertimeLocalDataSource {
     return updated;
   }
 
+  Future<List<OvertimeSession>> replaceHistory(
+    List<OvertimeSession> sessions,
+  ) async {
+    final normalized = [...sessions]
+      ..sort((left, right) => right.startedAt.compareTo(left.startedAt));
+    await _box.put(historyKey, normalized.map(_encode).toList());
+    return normalized;
+  }
+
   static Map<String, dynamic> _encode(OvertimeSession session) => {
     'id': session.id,
     'startedAt': session.startedAt.toIso8601String(),

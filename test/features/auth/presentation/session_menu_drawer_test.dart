@@ -22,6 +22,9 @@ class _MockLogoutUseCase extends Mock implements LogoutUseCase {}
 class _NoOpSessionDataCleaner implements SessionDataCleaner {
   @override
   Future<void> clear() async {}
+
+  @override
+  Future<void> claimSubject(String subject) async {}
 }
 
 class _MenuTranslationsLoader extends AssetLoader {

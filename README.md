@@ -195,6 +195,23 @@ fallback. Replay is FIFO and stops at the first retryable failure, preventing an
 end or submission from overtaking its start. The backend remains authoritative
 for geofence validation and overtime business rules.
 
+### Server reconciliation and employee profile
+
+On authenticated startup, the overtime repository requests
+`GET /api/v1/overtime/history` and reconciles the response with locally queued
+entries. Server records are authoritative when IDs match; local records that
+the server has not received yet remain visible and available for replay. If the
+network is unavailable, the last local snapshot continues to drive Home and
+History. If reconciliation detects different active entries on the device and
+server, overtime actions are blocked with an explicit conflict instead of
+guessing which entry is authoritative.
+
+The Home header and Profile destination use the authenticated projection from
+`GET /api/v1/me`; no demo employee identity or approved-hours total is shown.
+The latest successful profile response is cached in the session cache so the
+identity remains available offline. Logout clears that cache, preventing one
+FAE's identity from being shown to the next user.
+
 ### Authentication and offline sessions
 
 Login sends the FAE's NUIT and password to `POST /auth/login` through the auth
@@ -206,17 +223,22 @@ After one successful online login, the application can reopen without network
 access only while the cached access JWT is unexpired. The backend currently
 issues access tokens with a 3,600-second default lifetime. An expired or
 malformed access token is cleared together with its refresh token, and the FAE
-must go online to authenticate again. This client-side route gate supports
-offline usability; the backend remains the authority for every protected API
-request.
+must go online to authenticate again. Expiry resets session-owned in-memory
+providers but retains owner-tagged profile and overtime snapshots. A successful
+reauthentication by the same JWT subject restores that offline state; signing
+in as a different subject clears it first. Owner-tagged pending writes remain
+isolated for safe replay only by their original FAE. This client-side route gate
+supports offline usability; the backend remains the authority for every
+protected API request.
 
 The hamburger menu exposes a confirmation-protected logout action. When online,
 the app revokes the refresh session through `POST /auth/logout` before clearing
 local credentials. Offline logout still clears local credentials immediately;
-the session-scoped GET cache, queued writes, overtime records, and in-memory
-facial reference are also cleared so another FAE can never replay or view the
-previous FAE's data. Remote revocation relies on the refresh session's
-server-side expiry when logout occurs offline.
+the session-scoped GET cache, overtime records, and in-memory facial reference
+are also cleared so another FAE can never view the previous FAE's data. Queued
+writes remain owner-tagged and cannot be replayed by another FAE. Remote
+revocation relies on the refresh session's server-side expiry when logout
+occurs offline.
 
 **CEDSIF discussion item — not implemented:** CEDSIF may consider allowing a
 separate, longer offline-login window using a salted password-derived verifier

@@ -6,6 +6,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cedsif_overtime_mobile/core/error/failures.dart';
+import 'package:cedsif_overtime_mobile/core/auth/session_scope.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/device_location.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/overtime_session.dart';
@@ -79,6 +80,27 @@ void main() {
     expect(state.elapsed, const Duration(hours: 1, minutes: 36));
   });
 
+  test('clears in-memory overtime state when the session changes', () async {
+    final active = OvertimeSession(
+      id: 'previous-employee-active',
+      startedAt: DateTime(2026, 8, 13, 8),
+      status: OvertimeSessionStatus.active,
+    );
+    when(repository.load).thenAnswer(
+      (_) async => Right<Failure, OvertimeSnapshot>(
+        OvertimeSnapshot(activeSession: active, history: const []),
+      ),
+    );
+    await container.read(overtimeProvider.notifier).load();
+
+    container.read(sessionEpochProvider.notifier).advance();
+
+    expect(container.read(overtimeProvider).isLoaded, isFalse);
+    expect(container.read(overtimeProvider).activeSession, isNull);
+    expect(container.read(overtimeProvider).history, isEmpty);
+    expect(container.read(facialReferenceProvider), isNull);
+  });
+
   test('start persists one session and enters running state', () async {
     final started = OvertimeSession(
       id: 'new',
@@ -109,6 +131,30 @@ void main() {
         biometricReference: 'face-1',
       ),
     ).called(1);
+  });
+
+  test('dual-active reconciliation conflict blocks start actions', () async {
+    when(repository.load).thenAnswer(
+      (_) async => const Left<Failure, OvertimeSnapshot>(
+        ValidationFailure('overtime.conflictingActiveSession'),
+      ),
+    );
+    final notifier = container.read(overtimeProvider.notifier);
+
+    await notifier.load();
+    await notifier.start();
+
+    final state = container.read(overtimeProvider);
+    expect(state.hasBlockingConflict, isTrue);
+    expect(state.errorKey, 'overtime.conflictingActiveSession');
+    verifyNever(locationRepository.current);
+    verifyNever(
+      () => repository.start(
+        startedAt: any(named: 'startedAt'),
+        location: any(named: 'location'),
+        biometricReference: any(named: 'biometricReference'),
+      ),
+    );
   });
 
   test('pause freezes counting and enters review state', () async {

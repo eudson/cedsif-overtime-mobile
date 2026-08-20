@@ -30,6 +30,15 @@ class _HistoryTranslationsLoader extends AssetLoader {
 }
 
 void main() {
+  const entries = <HistoryEntry>[
+    HistoryEntry(
+      dateLabel: '18 Jul · Sex',
+      startTime: '08:24',
+      endTime: '11:11',
+      duration: '02:47',
+      status: AppStatus.pendente,
+    ),
+  ];
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
@@ -41,6 +50,7 @@ void main() {
     WidgetTester tester, {
     List<HistoryEntry>? entries,
     Widget? drawer,
+    bool isLoading = false,
   }) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -61,43 +71,39 @@ void main() {
             locale: context.locale,
             supportedLocales: context.supportedLocales,
             localizationsDelegates: context.localizationDelegates,
-            home: HistoryPage(entries: entries, drawer: drawer),
+            home: HistoryPage(
+              entries: entries ?? const [],
+              isLoading: isLoading,
+              drawer: drawer,
+            ),
           ),
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    if (isLoading) {
+      await tester.pump();
+      await tester.pump();
+    } else {
+      await tester.pumpAndSettle();
+    }
   }
 
   testWidgets('renders the approved History records and selected navigation', (
     tester,
   ) async {
-    await pumpHistory(tester);
+    await pumpHistory(tester, entries: entries);
 
     expect(find.text('Portal do FAE'), findsOneWidget);
     expect(find.text('Histórico'), findsNWidgets(2));
     expect(find.text('18 Jul · Sex'), findsOneWidget);
     expect(find.text('08:24 → 11:11 · 02:47'), findsOneWidget);
-    expect(find.text('15 Jul · Ter'), findsOneWidget);
-    expect(find.text('17:00 → 21:06 · 04:06'), findsOneWidget);
-    expect(find.text('11 Jul · Sex'), findsOneWidget);
-    expect(find.text('18:00 → 22:24 · 04:24'), findsOneWidget);
-    expect(find.text('08 Jul · Ter'), findsOneWidget);
-    expect(find.text('18:30 → 21:00 · 02:30'), findsOneWidget);
     expect(find.text('Pendente'), findsOneWidget);
-    expect(find.text('Aprovada'), findsNWidgets(3));
 
     expect(
       find.byWidgetPredicate(
         (widget) => widget is StatusChip && widget.status == AppStatus.pendente,
       ),
       findsOneWidget,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) => widget is StatusChip && widget.status == AppStatus.aprovada,
-      ),
-      findsNWidgets(3),
     );
     expect(
       tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
@@ -112,6 +118,15 @@ void main() {
     await pumpHistory(tester, entries: const []);
 
     expect(find.text('Histórico'), findsNWidgets(2));
+    expect(find.byType(HistoryEntryCard), findsNothing);
+  });
+
+  testWidgets('renders progress while API-backed history is loading', (
+    tester,
+  ) async {
+    await pumpHistory(tester, isLoading: true);
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(find.byType(HistoryEntryCard), findsNothing);
   });
 

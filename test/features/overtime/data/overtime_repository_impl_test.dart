@@ -1,10 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:dio/dio.dart';
 
 import 'package:cedsif_overtime_mobile/core/error/failures.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/datasources/overtime_local_datasource.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/datasources/overtime_pending_request_datasource.dart';
+import 'package:cedsif_overtime_mobile/features/overtime/data/datasources/overtime_remote_datasource.dart';
+import 'package:cedsif_overtime_mobile/features/overtime/data/models/time_entry_model.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/repositories/overtime_repository_impl.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/device_location.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/overtime_session.dart';
@@ -14,11 +17,14 @@ class _MockDataSource extends Mock implements OvertimeLocalDataSource {}
 class _MockPendingDataSource extends Mock
     implements OvertimePendingRequestDataSource {}
 
+class _MockRemoteDataSource extends Mock implements OvertimeRemoteDataSource {}
+
 class _FakeOvertimeSession extends Fake implements OvertimeSession {}
 
 void main() {
   late _MockDataSource dataSource;
   late _MockPendingDataSource pendingDataSource;
+  late _MockRemoteDataSource remoteDataSource;
   late OvertimeRepositoryImpl repository;
   late List<String> ids;
 
@@ -27,9 +33,11 @@ void main() {
   setUp(() {
     dataSource = _MockDataSource();
     pendingDataSource = _MockPendingDataSource();
+    remoteDataSource = _MockRemoteDataSource();
     ids = <String>['entry-1', 'start-1', 'end-1', 'submit-1'];
     repository = OvertimeRepositoryImpl(
       dataSource,
+      remoteDataSource: remoteDataSource,
       pendingDataSource: pendingDataSource,
       idFactory: () => ids.removeAt(0),
       triggerSync: () {},
@@ -44,6 +52,9 @@ void main() {
     );
     when(dataSource.loadActiveSession).thenAnswer((_) async => active);
     when(dataSource.loadHistory).thenAnswer((_) async => const []);
+    when(
+      remoteDataSource.history,
+    ).thenThrow(DioException(requestOptions: RequestOptions(path: '/history')));
 
     final result = await repository.load();
 
@@ -63,6 +74,91 @@ void main() {
     expect(result.isLeft(), isTrue);
     expect(result.getLeft().toNullable(), isA<CacheFailure>());
   });
+
+  test(
+    'synchronizes API history and preserves unsynced local entries',
+    () async {
+      final active = OvertimeSession(
+        id: 'active',
+        startedAt: DateTime.utc(2026, 8, 21, 8),
+        status: OvertimeSessionStatus.active,
+      );
+      final localPending = OvertimeSession(
+        id: 'local-pending',
+        startedAt: DateTime.utc(2026, 8, 20, 8),
+        endedAt: DateTime.utc(2026, 8, 20, 9),
+        status: OvertimeSessionStatus.pending,
+      );
+      final serverEntry = TimeEntryModel(
+        id: 'server-closed',
+        workUnitId: 'work-unit-1',
+        status: 'CLOSED',
+        startedAt: DateTime.utc(2026, 8, 19, 8),
+        endedAt: DateTime.utc(2026, 8, 19, 10),
+        durationSeconds: 7200,
+        locationVerified: true,
+      );
+      when(dataSource.loadActiveSession).thenAnswer((_) async => active);
+      when(
+        dataSource.loadHistory,
+      ).thenAnswer((_) async => <OvertimeSession>[localPending]);
+      when(
+        remoteDataSource.history,
+      ).thenAnswer((_) async => <TimeEntryModel>[serverEntry]);
+      when(() => dataSource.replaceHistory(any())).thenAnswer((
+        invocation,
+      ) async {
+        return invocation.positionalArguments.single as List<OvertimeSession>;
+      });
+
+      final result = await repository.load();
+
+      final snapshot = result.getRight().toNullable();
+      expect(snapshot?.activeSession, active);
+      expect(snapshot?.history.map((entry) => entry.id), <String>[
+        'local-pending',
+        'server-closed',
+      ]);
+      expect(snapshot?.history.last.status, OvertimeSessionStatus.pending);
+      verify(() => dataSource.replaceHistory(any())).called(1);
+    },
+  );
+
+  test(
+    'surfaces a conflict between queued local and server active sessions',
+    () async {
+      final local = OvertimeSession(
+        id: 'local-active',
+        startedAt: DateTime.utc(2026, 8, 21, 8),
+        status: OvertimeSessionStatus.active,
+        startIdempotencyKey: 'local-start-key',
+      );
+      final server = TimeEntryModel(
+        id: 'server-active',
+        workUnitId: 'work-unit-1',
+        status: 'IN_PROGRESS',
+        startedAt: DateTime.utc(2026, 8, 21, 7),
+        locationVerified: true,
+      );
+      when(dataSource.loadActiveSession).thenAnswer((_) async => local);
+      when(dataSource.loadHistory).thenAnswer((_) async => const []);
+      when(remoteDataSource.history).thenAnswer((_) async => [server]);
+      when(
+        () => pendingDataSource.hasPendingForTimeEntry('local-active'),
+      ).thenAnswer((_) async => true);
+      when(() => dataSource.replaceHistory(any())).thenAnswer((_) async => []);
+
+      final result = await repository.load();
+
+      expect(
+        result.getLeft().toNullable(),
+        const ValidationFailure('overtime.conflictingActiveSession'),
+      );
+      verifyNever(() => dataSource.saveActiveSession(any()));
+      verifyNever(dataSource.clearActiveSession);
+      verifyNever(() => dataSource.replaceHistory(any()));
+    },
+  );
 
   test(
     'start persists identifiers and queues biometric location proof',

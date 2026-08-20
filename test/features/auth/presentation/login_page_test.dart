@@ -14,6 +14,7 @@ import 'package:cedsif_overtime_mobile/core/config/providers.dart';
 import 'package:cedsif_overtime_mobile/core/error/failures.dart';
 import 'package:cedsif_overtime_mobile/core/sync/foreground_sync_coordinator.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/login_usecase.dart';
+import 'package:cedsif_overtime_mobile/features/auth/data/services/session_data_cleaner.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
 import 'package:cedsif_overtime_mobile/theme/app_spacing.dart';
@@ -47,6 +48,14 @@ class _MockLoginUseCase extends Mock implements LoginUseCase {}
 
 class _MockForegroundSyncCoordinator extends Mock
     implements ForegroundSyncCoordinator {}
+
+class _NoOpSessionDataCleaner implements SessionDataCleaner {
+  @override
+  Future<void> claimSubject(String subject) async {}
+
+  @override
+  Future<void> clear() async {}
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -82,6 +91,12 @@ void main() {
           loginUseCaseProvider.overrideWithValue(resolvedUseCase),
           foregroundSyncCoordinatorProvider.overrideWithValue(
             _MockForegroundSyncCoordinator(),
+          ),
+          sessionDataCleanerProvider.overrideWithValue(
+            _NoOpSessionDataCleaner(),
+          ),
+          authenticatedSubjectReaderProvider.overrideWithValue(
+            () async => 'employee-1',
           ),
         ],
         child: EasyLocalization(

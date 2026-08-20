@@ -22,6 +22,9 @@ import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/overtim
 import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/device_location.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/repositories/overtime_repository.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/presentation/providers/overtime_provider.dart';
+import 'package:cedsif_overtime_mobile/features/profile/domain/entities/employee_profile.dart';
+import 'package:cedsif_overtime_mobile/features/profile/domain/repositories/profile_repository.dart';
+import 'package:cedsif_overtime_mobile/features/profile/presentation/providers/profile_provider.dart';
 
 class _MockAppDatabase extends Mock implements AppDatabase {}
 
@@ -60,6 +63,19 @@ class _FakeOvertimeRepository implements OvertimeRepository {
       const Right(OvertimeSnapshot(history: []));
 }
 
+class _FakeProfileRepository implements ProfileRepository {
+  @override
+  Future<Either<Failure, EmployeeProfile>> get() async =>
+      const Right<Failure, EmployeeProfile>(
+        EmployeeProfile(
+          id: 'employee-id',
+          nuit: '123456789',
+          firstName: 'Ana',
+          lastName: 'Mucavele',
+        ),
+      );
+}
+
 void main() {
   setUpAll(() async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -95,6 +111,7 @@ void main() {
         syncEngineProvider.overrideWithValue(_MockSyncEngine()),
         foregroundSyncCoordinatorProvider.overrideWithValue(foregroundSync),
         overtimeRepositoryProvider.overrideWithValue(_FakeOvertimeRepository()),
+        profileRepositoryProvider.overrideWithValue(_FakeProfileRepository()),
         routerProvider.overrideWithValue(router),
       ]),
     );

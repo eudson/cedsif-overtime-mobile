@@ -101,6 +101,20 @@ void main() {
     verifyNever(() => box.put(any<dynamic>(), any<dynamic>()));
   });
 
+  test('finds queued writes for a specific time entry', () async {
+    when(() => box.values).thenReturn(<dynamic>[
+      <String, Object?>{
+        'body': <String, Object?>{'timeEntryId': 'entry-1'},
+      },
+      <String, Object?>{
+        'body': <String, Object?>{'workDate': '2026-08-20'},
+      },
+    ]);
+
+    expect(await dataSource.hasPendingForTimeEntry('entry-1'), isTrue);
+    expect(await dataSource.hasPendingForTimeEntry('entry-2'), isFalse);
+  });
+
   test('does not queue work without an authenticated owner', () async {
     final unownedDataSource = OvertimePendingRequestDataSource(
       box,

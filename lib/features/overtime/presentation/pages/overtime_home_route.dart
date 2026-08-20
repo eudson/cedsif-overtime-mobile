@@ -10,11 +10,17 @@ import 'package:cedsif_overtime_mobile/features/auth/presentation/widgets/sessio
 import 'package:cedsif_overtime_mobile/features/home/presentation/pages/home_page.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/presentation/pages/overtime_review_page.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/presentation/providers/overtime_provider.dart';
+import 'package:cedsif_overtime_mobile/features/profile/presentation/providers/profile_provider.dart';
 
 class OvertimeHomeRoute extends ConsumerStatefulWidget {
-  const OvertimeHomeRoute({this.onHistorySelected, super.key});
+  const OvertimeHomeRoute({
+    this.onHistorySelected,
+    this.onProfileSelected,
+    super.key,
+  });
 
   final VoidCallback? onHistorySelected;
+  final VoidCallback? onProfileSelected;
 
   @override
   ConsumerState<OvertimeHomeRoute> createState() => _OvertimeHomeRouteState();
@@ -27,11 +33,15 @@ class _OvertimeHomeRouteState extends ConsumerState<OvertimeHomeRoute> {
     if (!ref.read(overtimeProvider).isLoaded) {
       unawaited(ref.read(overtimeProvider.notifier).load());
     }
+    if (ref.read(profileProvider).profile == null) {
+      unawaited(Future.microtask(ref.read(profileProvider.notifier).load));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(overtimeProvider);
+    final profileState = ref.watch(profileProvider);
     final sessionDrawer = SessionMenuDrawer(
       onLoggedOut: () => context.go(RouteConstants.login),
     );
@@ -49,11 +59,13 @@ class _OvertimeHomeRouteState extends ConsumerState<OvertimeHomeRoute> {
     return HomePage(
       activeSession: state.activeSession,
       elapsed: state.elapsed,
-      isBusy: state.isSaving || !state.isLoaded,
+      isBusy: state.isSaving || !state.isLoaded || state.hasBlockingConflict,
       errorMessage: state.errorKey?.tr(),
       onStart: ref.read(overtimeProvider.notifier).start,
       onStop: ref.read(overtimeProvider.notifier).pause,
       onHistorySelected: widget.onHistorySelected,
+      onProfileSelected: widget.onProfileSelected,
+      profile: profileState.profile,
       drawer: sessionDrawer,
     );
   }

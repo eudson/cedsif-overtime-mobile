@@ -20,4 +20,5 @@ abstract final class RouteConstants {
   static const String facialValidation = '/validacao-facial';
   static const String home = '/home';
   static const String history = '/historico';
+  static const String profile = '/profile';
 }

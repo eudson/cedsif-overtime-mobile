@@ -26,18 +26,15 @@
   },
   "home": {
     "greeting": "Bom dia,",
-    "name": "Ana M. Cossa",
-    "identity": "NUIT 100234567 · DP Maputo",
+    "identity": "NUIT {nuit}",
+    "identityWithWorkUnit": "NUIT {nuit} · {workUnit}",
     "insidePerimeter": "No perímetro",
     "online": "Online",
     "notStarted": "Ainda não iniciou a contagem de hoje",
     "start": "Iniciar",
-    "thisMonth": "Este mês",
-    "approvedHours": "Horas aprovadas",
-    "approvedTotal": "18:30",
     "inProgress": "EM CURSO",
     "plannedDuration": "de 04:00 previstas",
-    "startedAt": "Início {time} · Ana M. Cossa",
+    "startedAt": "Início {time} · {name}",
     "stop": "Terminar contagem",
     "submitAfterStop": "O envio ao e-SNGRHE fica disponível depois de terminar",
     "insidePerimeterRunning": "Dentro do perímetro",
@@ -62,11 +59,21 @@
     "submit": "Enviar ao e-SNGRHE",
     "resume": "Retomar contagem"
   },
+  "overtime": {
+    "conflictingActiveSession": "Foi encontrada outra contagem ativa no servidor. Ligue-se à rede e contacte o suporte antes de continuar."
+  },
   "navigation": {
     "home": "Início",
     "history": "Histórico",
     "profile": "Perfil",
     "menu": "Menu"
+  },
+  "profile": {
+    "title": "Perfil",
+    "nuit": "NUIT",
+    "workUnit": "Unidade de trabalho",
+    "workUnitReference": "Referência da UGB",
+    "unassigned": "Não atribuída"
   },
   "status": {
     "inProgress": "Em curso",

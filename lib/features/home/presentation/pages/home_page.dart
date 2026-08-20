@@ -5,6 +5,7 @@ import 'package:cedsif_overtime_mobile/theme/app_colors.dart';
 import 'package:cedsif_overtime_mobile/theme/app_spacing.dart';
 import 'package:cedsif_overtime_mobile/theme/app_typography.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/overtime_session.dart';
+import 'package:cedsif_overtime_mobile/features/profile/domain/entities/employee_profile.dart';
 import 'package:cedsif_overtime_mobile/widgets/app_button.dart';
 import 'package:cedsif_overtime_mobile/widgets/app_scaffold.dart';
 import 'package:cedsif_overtime_mobile/widgets/semantic_banner.dart';
@@ -14,6 +15,8 @@ class HomePage extends StatelessWidget {
     this.onStart,
     this.onStop,
     this.onHistorySelected,
+    this.onProfileSelected,
+    this.profile,
     this.activeSession,
     this.elapsed = Duration.zero,
     this.isBusy = false,
@@ -25,6 +28,8 @@ class HomePage extends StatelessWidget {
   final VoidCallback? onStart;
   final VoidCallback? onStop;
   final VoidCallback? onHistorySelected;
+  final VoidCallback? onProfileSelected;
+  final EmployeeProfile? profile;
   final OvertimeSession? activeSession;
   final Duration elapsed;
   final bool isBusy;
@@ -42,6 +47,8 @@ class HomePage extends StatelessWidget {
       onDestinationSelected: (index) {
         if (index == 1) {
           onHistorySelected?.call();
+        } else if (index == 2) {
+          onProfileSelected?.call();
         }
       },
       backgroundColor: AppColors.surfaceAlternative,
@@ -73,9 +80,10 @@ class HomePage extends StatelessWidget {
                     elapsed: elapsed,
                     isBusy: isBusy,
                     onStop: onStop,
+                    employeeName: profile?.fullName,
                   )
                 else ...[
-                  const _FaeIdentity(),
+                  _FaeIdentity(profile: profile),
                   const SizedBox(height: AppSpacing.space24),
                   const Row(
                     children: [
@@ -113,8 +121,6 @@ class HomePage extends StatelessWidget {
                   Center(
                     child: _StartButton(onPressed: isBusy ? null : onStart),
                   ),
-                  const SizedBox(height: AppSpacing.space48),
-                  const _ApprovedHoursCard(),
                 ],
               ],
             ),
@@ -131,12 +137,14 @@ class _RunningContent extends StatelessWidget {
     required this.elapsed,
     required this.isBusy,
     this.onStop,
+    this.employeeName,
   });
 
   final OvertimeSession activeSession;
   final Duration elapsed;
   final bool isBusy;
   final VoidCallback? onStop;
+  final String? employeeName;
 
   @override
   Widget build(BuildContext context) {
@@ -214,7 +222,10 @@ class _RunningContent extends StatelessWidget {
         const SizedBox(height: AppSpacing.space24),
         Text(
           'home.startedAt'.tr(
-            namedArgs: {'time': _formatTime(activeSession.startedAt)},
+            namedArgs: {
+              'time': _formatTime(activeSession.startedAt),
+              'name': employeeName ?? '',
+            },
           ),
           textAlign: TextAlign.center,
           style: AppTypography.body,
@@ -272,7 +283,9 @@ class _OnlineChip extends StatelessWidget {
 }
 
 class _FaeIdentity extends StatelessWidget {
-  const _FaeIdentity();
+  const _FaeIdentity({this.profile});
+
+  final EmployeeProfile? profile;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -283,12 +296,20 @@ class _FaeIdentity extends StatelessWidget {
         style: AppTypography.input.copyWith(color: AppColors.textSecondary),
       ),
       const SizedBox(height: AppSpacing.space4),
-      Text('home.name'.tr(), style: AppTypography.screenTitleLarge),
+      Text(profile?.fullName ?? '', style: AppTypography.screenTitleLarge),
       const SizedBox(height: AppSpacing.space4),
-      Text(
-        'home.identity'.tr(),
-        style: AppTypography.input.copyWith(color: AppColors.textMuted),
-      ),
+      Text(switch (profile) {
+        null => '',
+        final employee when employee.workUnit == null => 'home.identity'.tr(
+          namedArgs: {'nuit': employee.nuit},
+        ),
+        final employee => 'home.identityWithWorkUnit'.tr(
+          namedArgs: {
+            'nuit': employee.nuit,
+            'workUnit': employee.workUnit!.name,
+          },
+        ),
+      }, style: AppTypography.input.copyWith(color: AppColors.textMuted)),
     ],
   );
 }
@@ -386,60 +407,4 @@ class _StartButton extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ApprovedHoursCard extends StatelessWidget {
-  const _ApprovedHoursCard();
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    label:
-        '${'home.approvedHours'.tr()}, ${'home.approvedTotal'.tr()}, '
-        '${'home.thisMonth'.tr()}',
-    container: true,
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(
-        minHeight: AppSpacing.homeSummaryMinHeight,
-      ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppColors.warningBackground,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.space16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'home.thisMonth'.tr(),
-                      style: AppTypography.labelStrong.copyWith(
-                        color: AppColors.warning,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.space4),
-                    Text(
-                      'home.approvedHours'.tr(),
-                      style: AppTypography.sectionTitle.copyWith(
-                        color: AppColors.textStrong,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.space16),
-              Text(
-                'home.approvedTotal'.tr(),
-                style: AppTypography.numericTotal,
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
 }

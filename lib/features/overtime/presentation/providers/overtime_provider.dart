@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:cedsif_overtime_mobile/core/config/providers.dart';
 import 'package:cedsif_overtime_mobile/core/auth/authenticated_subject.dart';
+import 'package:cedsif_overtime_mobile/core/auth/session_scope.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/datasources/location_data_source.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/datasources/overtime_local_datasource.dart';
@@ -52,6 +53,7 @@ final locationRepositoryProvider = Provider<LocationRepository>(
 final overtimeRepositoryProvider = Provider<OvertimeRepository>(
   (ref) => OvertimeRepositoryImpl(
     ref.watch(overtimeLocalDataSourceProvider),
+    remoteDataSource: ref.watch(overtimeRemoteDataSourceProvider),
     pendingDataSource: ref.watch(overtimePendingRequestDataSourceProvider),
     idFactory: const Uuid().v4,
     triggerSync: ref.watch(foregroundSyncCoordinatorProvider).requestSync,
@@ -66,6 +68,7 @@ class OvertimeState {
     this.history = const [],
     this.now,
     this.errorKey,
+    this.hasBlockingConflict = false,
   });
 
   final bool isLoaded;
@@ -74,6 +77,7 @@ class OvertimeState {
   final List<OvertimeSession> history;
   final DateTime? now;
   final String? errorKey;
+  final bool hasBlockingConflict;
 
   bool get isRunning => activeSession?.status == OvertimeSessionStatus.active;
 
@@ -95,6 +99,7 @@ class OvertimeState {
     List<OvertimeSession>? history,
     DateTime? now,
     Object? errorKey = _unchanged,
+    bool? hasBlockingConflict,
   }) => OvertimeState(
     isLoaded: isLoaded ?? this.isLoaded,
     isSaving: isSaving ?? this.isSaving,
@@ -106,6 +111,7 @@ class OvertimeState {
     errorKey: identical(errorKey, _unchanged)
         ? this.errorKey
         : errorKey as String?,
+    hasBlockingConflict: hasBlockingConflict ?? this.hasBlockingConflict,
   );
 }
 
@@ -116,6 +122,7 @@ class OvertimeNotifier extends Notifier<OvertimeState> {
 
   @override
   OvertimeState build() {
+    ref.watch(sessionEpochProvider);
     ref.onDispose(() => _ticker?.cancel());
     return const OvertimeState();
   }
@@ -123,8 +130,16 @@ class OvertimeNotifier extends Notifier<OvertimeState> {
   Future<void> load() async {
     final result = await ref.read(overtimeRepositoryProvider).load();
     result.fold(
-      (failure) =>
-          state = state.copyWith(isLoaded: true, errorKey: failure.message),
+      (failure) {
+        final isConflict =
+            failure.message == 'overtime.conflictingActiveSession';
+        state = state.copyWith(
+          isLoaded: true,
+          activeSession: isConflict ? null : _unchanged,
+          errorKey: failure.message,
+          hasBlockingConflict: isConflict,
+        );
+      },
       (snapshot) {
         state = OvertimeState(
           isLoaded: true,
@@ -140,7 +155,10 @@ class OvertimeNotifier extends Notifier<OvertimeState> {
   }
 
   Future<void> start() async {
-    if (!state.isLoaded || state.isSaving || state.activeSession != null) {
+    if (!state.isLoaded ||
+        state.isSaving ||
+        state.hasBlockingConflict ||
+        state.activeSession != null) {
       return;
     }
     final biometricReference = ref.read(facialReferenceProvider);
@@ -182,7 +200,7 @@ class OvertimeNotifier extends Notifier<OvertimeState> {
   }
 
   Future<void> pause() async {
-    if (state.isSaving || !state.isRunning) {
+    if (state.isSaving || state.hasBlockingConflict || !state.isRunning) {
       return;
     }
     final now = ref.read(overtimeClockProvider)();
@@ -203,7 +221,7 @@ class OvertimeNotifier extends Notifier<OvertimeState> {
   }
 
   Future<void> resume() async {
-    if (state.isSaving || !state.isReviewing) {
+    if (state.isSaving || state.hasBlockingConflict || !state.isReviewing) {
       return;
     }
     final now = ref.read(overtimeClockProvider)();
@@ -224,7 +242,7 @@ class OvertimeNotifier extends Notifier<OvertimeState> {
   }
 
   Future<void> submit() async {
-    if (state.isSaving || !state.isReviewing) {
+    if (state.isSaving || state.hasBlockingConflict || !state.isReviewing) {
       return;
     }
     state = state.copyWith(isSaving: true, errorKey: null);

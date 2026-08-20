@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cedsif_overtime_mobile/features/home/presentation/pages/home_page.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/overtime_session.dart';
+import 'package:cedsif_overtime_mobile/features/profile/domain/entities/employee_profile.dart';
 import 'package:cedsif_overtime_mobile/theme/app_spacing.dart';
 import 'package:cedsif_overtime_mobile/theme/app_theme.dart';
 
@@ -19,8 +20,8 @@ class _HomeTranslationsLoader extends AssetLoader {
     },
     'home': {
       'greeting': 'Bom dia,',
-      'name': 'Ana M. Cossa',
-      'identity': 'NUIT 100234567 · DP Maputo',
+      'identity': 'NUIT {nuit}',
+      'identityWithWorkUnit': 'NUIT {nuit} · {workUnit}',
       'insidePerimeter': 'No perímetro',
       'online': 'Online',
       'notStarted': 'Ainda não iniciou a contagem de hoje',
@@ -30,7 +31,7 @@ class _HomeTranslationsLoader extends AssetLoader {
       'approvedTotal': '18:30',
       'inProgress': 'EM CURSO',
       'plannedDuration': 'de 04:00 previstas',
-      'startedAt': 'Início {time} · Ana M. Cossa',
+      'startedAt': 'Início {time} · {name}',
       'stop': 'Terminar contagem',
       'submitAfterStop':
           'O envio ao e-SNGRHE fica disponível depois de terminar',
@@ -59,10 +60,12 @@ void main() {
     VoidCallback? onStart,
     VoidCallback? onStop,
     VoidCallback? onHistorySelected,
+    VoidCallback? onProfileSelected,
     OvertimeSession? activeSession,
     Duration elapsed = Duration.zero,
     bool isBusy = false,
     Widget? drawer,
+    EmployeeProfile? profile,
   }) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -87,10 +90,12 @@ void main() {
               onStart: onStart,
               onStop: onStop,
               onHistorySelected: onHistorySelected,
+              onProfileSelected: onProfileSelected,
               activeSession: activeSession,
               elapsed: elapsed,
               isBusy: isBusy,
               drawer: drawer,
+              profile: profile,
             ),
           ),
         ),
@@ -99,22 +104,33 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('renders the supplied Home identity, statuses, and summary', (
+  testWidgets('renders the authenticated identity without a mock summary', (
     tester,
   ) async {
-    await pumpHome(tester);
+    await pumpHome(
+      tester,
+      profile: const EmployeeProfile(
+        id: 'employee-id',
+        nuit: '123456789',
+        firstName: 'Maria',
+        lastName: 'Mabunda',
+        workUnit: WorkUnitSummary(
+          id: 'work-unit-id',
+          externalReference: 'DP-MPM',
+          name: 'DP Maputo',
+        ),
+      ),
+    );
 
     expect(find.text('Portal do FAE'), findsOneWidget);
     expect(find.text('Bom dia,'), findsOneWidget);
-    expect(find.text('Ana M. Cossa'), findsOneWidget);
-    expect(find.text('NUIT 100234567 · DP Maputo'), findsOneWidget);
+    expect(find.text('Maria Mabunda'), findsOneWidget);
+    expect(find.text('NUIT 123456789 · DP Maputo'), findsOneWidget);
     expect(find.text('No perímetro'), findsOneWidget);
     expect(find.text('Online'), findsOneWidget);
     expect(find.text('Ainda não iniciou a contagem de hoje'), findsOneWidget);
     expect(find.text('Iniciar'), findsOneWidget);
-    expect(find.text('Este mês'), findsOneWidget);
-    expect(find.text('Horas aprovadas'), findsOneWidget);
-    expect(find.text('18:30'), findsOneWidget);
+    expect(find.text('18:30'), findsNothing);
   });
 
   testWidgets('forwards the authenticated session drawer', (tester) async {
@@ -125,11 +141,16 @@ void main() {
     expect(tester.widget<Scaffold>(find.byType(Scaffold)).drawer, drawer);
   });
 
-  testWidgets('History destination invokes its navigation hook', (
+  testWidgets('bottom destinations invoke their navigation hooks', (
     tester,
   ) async {
     var historySelections = 0;
-    await pumpHome(tester, onHistorySelected: () => historySelections++);
+    var profileSelections = 0;
+    await pumpHome(
+      tester,
+      onHistorySelected: () => historySelections++,
+      onProfileSelected: () => profileSelections++,
+    );
 
     expect(find.text('Início'), findsOneWidget);
     expect(find.text('Histórico'), findsOneWidget);
@@ -138,9 +159,8 @@ void main() {
     expect(historySelections, 1);
 
     await tester.tap(find.text('Perfil'));
-    await tester.pump();
     expect(historySelections, 1);
-    expect(find.text('Ana M. Cossa'), findsOneWidget);
+    expect(profileSelections, 1);
   });
 
   testWidgets('start control is accessible and invokes the navigation hook', (
@@ -175,7 +195,7 @@ void main() {
     expect(find.text('EM CURSO'), findsOneWidget);
     expect(find.text('01:36:05'), findsOneWidget);
     expect(find.text('de 04:00 previstas'), findsOneWidget);
-    expect(find.text('Início 08:24 · Ana M. Cossa'), findsOneWidget);
+    expect(find.text('Início 08:24 · '), findsOneWidget);
     expect(find.text('Terminar contagem'), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
 

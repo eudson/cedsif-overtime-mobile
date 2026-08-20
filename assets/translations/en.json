@@ -1,8 +1,16 @@
 {
   "app": {
-    "title": "Horas Extras"
+    "title": "Overtime Portal",
+    "emblem": "Emblem of the Republic of Mozambique"
   },
   "auth": {
+    "subtitle": "Overtime registration",
+    "nuit": "NUIT",
+    "password": "Password",
+    "enter": "Sign in",
+    "forgotPassword": "Forgot your password?",
+    "required": "Required field",
+    "invalidNuit": "Enter a valid 9-digit NUIT",
     "invalidCredentials": "Invalid NUIT or password",
     "facialValidation": "Facial verification",
     "facialInstructions": "Position your face within the image and continue to simulate verification.",
@@ -17,7 +25,24 @@
     "logoutConfirmMessage": "You will need to sign in again to continue."
   },
   "home": {
-    "placeholder": "Home"
+    "placeholder": "Home",
+    "greeting": "Good morning,",
+    "identity": "NUIT {nuit}",
+    "identityWithWorkUnit": "NUIT {nuit} · {workUnit}",
+    "insidePerimeter": "Within perimeter",
+    "online": "Online",
+    "notStarted": "You have not started today's count yet",
+    "start": "Start",
+    "inProgress": "IN PROGRESS",
+    "plannedDuration": "of 04:00 planned",
+    "startedAt": "Started {time} · {name}",
+    "stop": "Stop counting",
+    "submitAfterStop": "Submission to e-SNGRHE becomes available after stopping",
+    "insidePerimeterRunning": "Within the perimeter",
+    "onlineUpper": "ONLINE"
+  },
+  "history": {
+    "title": "History"
   },
   "location": {
     "servicesDisabled": "Turn on location services and try again.",
@@ -34,6 +59,40 @@
     "registeredTime": "Registered time",
     "submit": "Submit to e-SNGRHE",
     "resume": "Resume counting"
+  },
+  "overtime": {
+    "conflictingActiveSession": "Another active count was found on the server. Stay online and contact support before continuing."
+  },
+  "navigation": {
+    "home": "Home",
+    "history": "History",
+    "profile": "Profile",
+    "menu": "Menu"
+  },
+  "profile": {
+    "title": "Profile",
+    "nuit": "NUIT",
+    "workUnit": "Work unit",
+    "workUnitReference": "UGB reference",
+    "unassigned": "Not assigned"
+  },
+  "status": {
+    "inProgress": "In progress",
+    "approved": "Approved",
+    "pending": "Pending",
+    "blocked": "Blocked",
+    "offline": "Offline"
+  },
+  "calendar": {
+    "months": {
+      "1": "Jan", "2": "Feb", "3": "Mar", "4": "Apr",
+      "5": "May", "6": "Jun", "7": "Jul", "8": "Aug",
+      "9": "Sep", "10": "Oct", "11": "Nov", "12": "Dec"
+    },
+    "weekdays": {
+      "1": "Mon", "2": "Tue", "3": "Wed", "4": "Thu",
+      "5": "Fri", "6": "Sat", "7": "Sun"
+    }
   },
   "common": {
     "retry": "Retry",

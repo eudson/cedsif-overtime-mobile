@@ -18,6 +18,19 @@ class OvertimePendingRequestDataSource {
   final PendingRequestOwnerSubjectProvider _ownerSubjectProvider;
   final PendingRequestClock _clock;
 
+  Future<bool> hasPendingForTimeEntry(String timeEntryId) async {
+    for (final value in _box.values) {
+      if (value is! Map) {
+        continue;
+      }
+      final body = value['body'];
+      if (body is Map && body['timeEntryId'] == timeEntryId) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   Future<void> enqueueStart({
     required String timeEntryId,
     required double latitude,

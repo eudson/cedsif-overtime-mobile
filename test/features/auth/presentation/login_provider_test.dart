@@ -8,6 +8,7 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:cedsif_overtime_mobile/core/error/failures.dart';
 import 'package:cedsif_overtime_mobile/core/config/providers.dart';
+import 'package:cedsif_overtime_mobile/core/auth/session_scope.dart';
 import 'package:cedsif_overtime_mobile/core/sync/foreground_sync_coordinator.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/login_usecase.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/logout_usecase.dart';
@@ -26,15 +27,23 @@ class _MockForegroundSyncCoordinator extends Mock
 void main() {
   late _MockLoginUseCase useCase;
   late _MockForegroundSyncCoordinator syncCoordinator;
+  late _MockSessionDataCleaner sessionDataCleaner;
   late ProviderContainer container;
 
   setUp(() {
     useCase = _MockLoginUseCase();
     syncCoordinator = _MockForegroundSyncCoordinator();
+    sessionDataCleaner = _MockSessionDataCleaner();
+    when(sessionDataCleaner.clear).thenAnswer((_) async {});
+    when(() => sessionDataCleaner.claimSubject(any())).thenAnswer((_) async {});
     container = ProviderContainer(
       overrides: <Override>[
         loginUseCaseProvider.overrideWithValue(useCase),
         foregroundSyncCoordinatorProvider.overrideWithValue(syncCoordinator),
+        sessionDataCleanerProvider.overrideWithValue(sessionDataCleaner),
+        authenticatedSubjectReaderProvider.overrideWithValue(
+          () async => 'employee-1',
+        ),
       ],
     );
   });
@@ -64,7 +73,10 @@ void main() {
     expect(await operation, isTrue);
     expect(container.read(loginNotifierProvider).isLoading, isFalse);
     expect(container.read(loginNotifierProvider).errorKey, isNull);
+    expect(container.read(sessionEpochProvider), 1);
     verify(syncCoordinator.requestSync).called(1);
+    verify(() => sessionDataCleaner.claimSubject('employee-1')).called(1);
+    verifyNever(sessionDataCleaner.clear);
   });
 
   test('returns false and exposes a typed failure translation key', () async {
@@ -107,6 +119,7 @@ void main() {
     final completer = Completer<Either<Failure, Unit>>();
     when(logoutUseCase.call).thenAnswer((_) => completer.future);
     when(cleaner.clear).thenAnswer((_) async {});
+    when(() => cleaner.claimSubject(any())).thenAnswer((_) async {});
     final logoutContainer = ProviderContainer(
       overrides: <Override>[
         logoutUseCaseProvider.overrideWithValue(logoutUseCase),
@@ -128,6 +141,7 @@ void main() {
     expect(logoutContainer.read(logoutNotifierProvider).isLoading, isFalse);
     expect(logoutContainer.read(logoutNotifierProvider).errorKey, isNull);
     expect(logoutContainer.read(facialReferenceProvider), isNull);
+    expect(logoutContainer.read(sessionEpochProvider), 1);
     verify(cleaner.clear).called(1);
   });
 

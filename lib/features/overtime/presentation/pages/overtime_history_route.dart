@@ -14,9 +14,14 @@ import 'package:cedsif_overtime_mobile/features/overtime/presentation/providers/
 import 'package:cedsif_overtime_mobile/widgets/status_chip.dart';
 
 class OvertimeHistoryRoute extends ConsumerStatefulWidget {
-  const OvertimeHistoryRoute({this.onHomeSelected, super.key});
+  const OvertimeHistoryRoute({
+    this.onHomeSelected,
+    this.onProfileSelected,
+    super.key,
+  });
 
   final VoidCallback? onHomeSelected;
+  final VoidCallback? onProfileSelected;
 
   @override
   ConsumerState<OvertimeHistoryRoute> createState() =>
@@ -36,10 +41,10 @@ class _OvertimeHistoryRouteState extends ConsumerState<OvertimeHistoryRoute> {
   Widget build(BuildContext context) {
     final state = ref.watch(overtimeProvider);
     return HistoryPage(
-      entries: state.isLoaded
-          ? state.history.map(_toHistoryEntry).toList()
-          : null,
+      entries: state.history.map(_toHistoryEntry).toList(),
+      isLoading: !state.isLoaded,
       onHomeSelected: widget.onHomeSelected,
+      onProfileSelected: widget.onProfileSelected,
       drawer: SessionMenuDrawer(
         onLoggedOut: () => context.go(RouteConstants.login),
       ),
