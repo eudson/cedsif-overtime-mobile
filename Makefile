@@ -1,4 +1,4 @@
-.PHONY: setup get build-runner build-runner-watch format analyze test policy-check ci-check run-dev run-prod build-android build-ios icons doctor
+.PHONY: setup get build-runner build-runner-watch format analyze test policy-check ci-check run-local run-dev run-prod build-android build-ios icons doctor
 
 setup:
 	flutter pub get
@@ -26,6 +26,10 @@ policy-check:
 	tool/policy_check.sh
 
 ci-check: policy-check format analyze test
+
+run-local:
+	@test -f .env.local || (echo "Missing .env.local; copy .env.example and set the local API URL" && exit 1)
+	flutter run --dart-define-from-file=.env.local
 
 run-dev:
 	flutter run --dart-define-from-file=.env.dev

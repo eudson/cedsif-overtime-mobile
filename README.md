@@ -51,15 +51,24 @@ Environment files are required. Use the Make targets as the supported entry poin
 
 ```sh
 make run-dev
+make run-local
 make run-prod
 make build-android
 make build-ios
 ```
 
 - `run-dev` launches with `.env.dev`.
+- `run-local` launches with the ignored `.env.local` developer override.
 - `run-prod` launches a release build with `.env.prod`.
 - `build-android` creates a release Android App Bundle using `.env.prod`.
 - `build-ios` creates a release iOS build without code signing using `.env.prod`; signing remains a release-pipeline responsibility.
+
+For an Android emulator calling an API on the development machine, copy
+`.env.example` to the ignored `.env.local` file and set
+`API_BASE_URL=http://10.0.2.2:8080`. Android
+cleartext traffic is enabled only in the debug manifest; release builds retain
+the platform's secure networking defaults. Use the development machine's LAN
+address instead when testing on a physical device.
 
 Additional workflow targets:
 
