@@ -9,7 +9,21 @@ void main() {
       ApiEndpoints.health,
       ApiEndpoints.login,
       ApiEndpoints.refreshToken,
+      ApiEndpoints.logout,
+      ApiEndpoints.overtimeStart,
+      ApiEndpoints.overtimeEnd,
+      ApiEndpoints.overtimeHistory,
+      ApiEndpoints.overtimeSubmit,
     ];
+    expect(
+      endpoints,
+      containsAll(<String>{
+        '/api/v1/overtime/start',
+        '/api/v1/overtime/end',
+        '/api/v1/overtime/history',
+        '/api/v1/overtime/submit',
+      }),
+    );
     expect(endpoints.toSet(), hasLength(endpoints.length));
     for (final endpoint in endpoints) {
       expect(endpoint, startsWith('/'));

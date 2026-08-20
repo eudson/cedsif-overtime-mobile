@@ -44,10 +44,7 @@ Future<bool> processGenericBackgroundQueue() async {
   } finally {
     networkClient?.close(force: true);
     await authEventBus.dispose();
-    await Future.wait(<Future<void>>[
-      database.cacheBox.close(),
-      database.pendingRequestsBox.close(),
-    ]);
+    await database.close();
   }
 }
 

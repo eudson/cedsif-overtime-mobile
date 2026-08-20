@@ -5,8 +5,8 @@ import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/overtim
 class OvertimeLocalDataSource {
   const OvertimeLocalDataSource(this._box);
 
-  static const activeSessionKey = 'demo_overtime_active_session';
-  static const historyKey = 'demo_overtime_history';
+  static const activeSessionKey = 'active_session';
+  static const historyKey = 'history';
 
   final Box<dynamic> _box;
 
@@ -23,9 +23,7 @@ class OvertimeLocalDataSource {
   Future<List<OvertimeSession>> loadHistory() async {
     final value = _box.get(historyKey);
     if (value == null) {
-      final seeded = _seedHistory();
-      await _box.put(historyKey, seeded.map(_encode).toList());
-      return seeded;
+      return const <OvertimeSession>[];
     }
     return (value as List<dynamic>).map(_decode).toList()
       ..sort((left, right) => right.startedAt.compareTo(left.startedAt));
@@ -63,31 +61,4 @@ class OvertimeLocalDataSource {
       ),
     );
   }
-
-  static List<OvertimeSession> _seedHistory() => [
-    OvertimeSession(
-      id: 'seed-2026-07-18',
-      startedAt: DateTime(2026, 7, 18, 8, 24),
-      endedAt: DateTime(2026, 7, 18, 11, 11),
-      status: OvertimeSessionStatus.pending,
-    ),
-    OvertimeSession(
-      id: 'seed-2026-07-15',
-      startedAt: DateTime(2026, 7, 15, 17),
-      endedAt: DateTime(2026, 7, 15, 21, 6),
-      status: OvertimeSessionStatus.approved,
-    ),
-    OvertimeSession(
-      id: 'seed-2026-07-11',
-      startedAt: DateTime(2026, 7, 11, 18),
-      endedAt: DateTime(2026, 7, 11, 22, 24),
-      status: OvertimeSessionStatus.approved,
-    ),
-    OvertimeSession(
-      id: 'seed-2026-07-08',
-      startedAt: DateTime(2026, 7, 8, 18, 30),
-      endedAt: DateTime(2026, 7, 8, 21),
-      status: OvertimeSessionStatus.approved,
-    ),
-  ];
 }

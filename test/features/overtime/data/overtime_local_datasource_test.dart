@@ -16,6 +16,11 @@ void main() {
     dataSource = OvertimeLocalDataSource(box);
   });
 
+  test('uses feature-owned keys without demo prefixes', () {
+    expect(OvertimeLocalDataSource.activeSessionKey, 'active_session');
+    expect(OvertimeLocalDataSource.historyKey, 'history');
+  });
+
   test('loads the active session from a JSON-compatible Hive map', () async {
     when(() => box.get(OvertimeLocalDataSource.activeSessionKey)).thenReturn({
       'id': 'active-1',
@@ -83,20 +88,15 @@ void main() {
     );
   });
 
-  test('seeds reference history once and keeps newest records first', () async {
+  test('returns empty history when no synchronized records exist', () async {
     when(() => box.get(OvertimeLocalDataSource.historyKey)).thenReturn(null);
-    when(
-      () => box.put(OvertimeLocalDataSource.historyKey, any<dynamic>()),
-    ).thenAnswer((_) async {});
 
     final history = await dataSource.loadHistory();
 
-    expect(history, hasLength(4));
-    expect(history.first.status, OvertimeSessionStatus.pending);
-    expect(history.first.startedAt, DateTime(2026, 7, 18, 8, 24));
-    verify(
+    expect(history, isEmpty);
+    verifyNever(
       () => box.put(OvertimeLocalDataSource.historyKey, any<dynamic>()),
-    ).called(1);
+    );
   });
 
   test('prepends a completed session to persisted history', () async {

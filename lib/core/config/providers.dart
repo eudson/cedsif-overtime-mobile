@@ -44,6 +44,10 @@ final pendingRequestsBoxProvider = Provider<Box<dynamic>>(
   (ref) => ref.watch(appDatabaseProvider).pendingRequestsBox,
 );
 
+final overtimeBoxProvider = Provider<Box<dynamic>>(
+  (ref) => ref.watch(appDatabaseProvider).overtimeBox,
+);
+
 final authEventBusProvider = Provider<AuthEventBus>(
   (ref) => _missingBootstrapResource('AuthEventBus'),
 );

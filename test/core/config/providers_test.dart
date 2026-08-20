@@ -64,8 +64,10 @@ void main() {
     final database = _MockDatabase();
     final cacheBox = _MockBox();
     final pendingBox = _MockBox();
+    final overtimeBox = _MockBox();
     when(() => database.cacheBox).thenReturn(cacheBox);
     when(() => database.pendingRequestsBox).thenReturn(pendingBox);
+    when(() => database.overtimeBox).thenReturn(overtimeBox);
     final secureStorage = _MockSecureStorage();
     final authEventBus = AuthEventBus();
     final networkMonitor = _MockNetworkMonitor();
@@ -97,6 +99,7 @@ void main() {
     expect(container.read(appDatabaseProvider), same(database));
     expect(container.read(cacheBoxProvider), same(cacheBox));
     expect(container.read(pendingRequestsBoxProvider), same(pendingBox));
+    expect(container.read(overtimeBoxProvider), same(overtimeBox));
     expect(container.read(authEventBusProvider), same(authEventBus));
     expect(container.read(networkMonitorProvider), same(networkMonitor));
     expect(container.read(syncEngineProvider), same(syncEngine));

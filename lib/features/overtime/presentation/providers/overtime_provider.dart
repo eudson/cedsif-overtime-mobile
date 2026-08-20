@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cedsif_overtime_mobile/core/config/providers.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/datasources/overtime_local_datasource.dart';
+import 'package:cedsif_overtime_mobile/features/overtime/data/datasources/overtime_remote_datasource.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/repositories/overtime_repository_impl.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/overtime_session.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/repositories/overtime_repository.dart';
@@ -13,7 +14,11 @@ typedef OvertimeClock = DateTime Function();
 final overtimeClockProvider = Provider<OvertimeClock>((ref) => DateTime.now);
 
 final overtimeLocalDataSourceProvider = Provider<OvertimeLocalDataSource>(
-  (ref) => OvertimeLocalDataSource(ref.watch(cacheBoxProvider)),
+  (ref) => OvertimeLocalDataSource(ref.watch(overtimeBoxProvider)),
+);
+
+final overtimeRemoteDataSourceProvider = Provider<OvertimeRemoteDataSource>(
+  (ref) => DioOvertimeRemoteDataSource(ref.watch(dioProvider)),
 );
 
 final overtimeRepositoryProvider = Provider<OvertimeRepository>(
