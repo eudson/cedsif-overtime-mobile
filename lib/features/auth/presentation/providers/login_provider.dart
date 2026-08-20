@@ -6,6 +6,7 @@ import 'package:cedsif_overtime_mobile/features/auth/data/repositories/auth_repo
 import 'package:cedsif_overtime_mobile/features/auth/data/services/auth_session_service.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/login_usecase.dart';
+import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/logout_usecase.dart';
 
 class LoginState {
   const LoginState({this.isLoading = false, this.errorKey});
@@ -27,6 +28,10 @@ final authRepositoryProvider = Provider<AuthRepository>(
 
 final loginUseCaseProvider = Provider<LoginUseCase>(
   (ref) => LoginUseCase(ref.watch(authRepositoryProvider)),
+);
+
+final logoutUseCaseProvider = Provider<LogoutUseCase>(
+  (ref) => LogoutUseCase(ref.watch(authRepositoryProvider)),
 );
 
 final authSessionServiceProvider = Provider<AuthSessionService>(
@@ -61,4 +66,38 @@ class LoginNotifier extends Notifier<LoginState> {
 
 final loginNotifierProvider = NotifierProvider<LoginNotifier, LoginState>(
   LoginNotifier.new,
+);
+
+class LogoutState {
+  const LogoutState({this.isLoading = false, this.errorKey});
+
+  final bool isLoading;
+  final String? errorKey;
+}
+
+class LogoutNotifier extends Notifier<LogoutState> {
+  @override
+  LogoutState build() => const LogoutState();
+
+  Future<bool> logout() async {
+    if (state.isLoading) {
+      return false;
+    }
+    state = const LogoutState(isLoading: true);
+    final result = await ref.read(logoutUseCaseProvider)();
+    return result.fold(
+      (failure) {
+        state = LogoutState(errorKey: failure.message);
+        return false;
+      },
+      (_) {
+        state = const LogoutState();
+        return true;
+      },
+    );
+  }
+}
+
+final logoutNotifierProvider = NotifierProvider<LogoutNotifier, LogoutState>(
+  LogoutNotifier.new,
 );

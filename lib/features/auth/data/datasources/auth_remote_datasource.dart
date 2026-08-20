@@ -8,6 +8,8 @@ abstract interface class AuthRemoteDataSource {
     required String nuit,
     required String password,
   });
+
+  Future<void> logout({required String refreshToken});
 }
 
 class DioAuthRemoteDataSource implements AuthRemoteDataSource {
@@ -29,5 +31,13 @@ class DioAuthRemoteDataSource implements AuthRemoteDataSource {
       throw const FormatException('Invalid login response');
     }
     return LoginResponseModel.fromJson(data);
+  }
+
+  @override
+  Future<void> logout({required String refreshToken}) async {
+    await _dio.post<void>(
+      ApiEndpoints.logout,
+      data: <String, Object?>{'refreshToken': refreshToken},
+    );
   }
 }

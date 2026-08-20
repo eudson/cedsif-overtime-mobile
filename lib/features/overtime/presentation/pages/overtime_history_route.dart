@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
+import 'package:cedsif_overtime_mobile/features/auth/presentation/widgets/session_menu_drawer.dart';
 import 'package:cedsif_overtime_mobile/features/history/presentation/models/history_entry.dart';
 import 'package:cedsif_overtime_mobile/features/history/presentation/pages/history_page.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/overtime_session.dart';
@@ -37,6 +40,9 @@ class _OvertimeHistoryRouteState extends ConsumerState<OvertimeHistoryRoute> {
           ? state.history.map(_toHistoryEntry).toList()
           : null,
       onHomeSelected: widget.onHomeSelected,
+      drawer: SessionMenuDrawer(
+        onLoggedOut: () => context.go(RouteConstants.login),
+      ),
     );
   }
 

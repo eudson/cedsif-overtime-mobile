@@ -16,6 +16,7 @@ class OvertimeReviewPage extends StatelessWidget {
     this.onSubmit,
     this.onResume,
     this.onMenuPressed,
+    this.drawer,
     this.isBusy = false,
     this.errorMessage,
     super.key,
@@ -26,6 +27,7 @@ class OvertimeReviewPage extends StatelessWidget {
   final VoidCallback? onSubmit;
   final VoidCallback? onResume;
   final VoidCallback? onMenuPressed;
+  final Widget? drawer;
   final bool isBusy;
   final String? errorMessage;
 
@@ -33,6 +35,7 @@ class OvertimeReviewPage extends StatelessWidget {
   Widget build(BuildContext context) => AppScaffold(
     showTopBar: true,
     onMenuPressed: onMenuPressed,
+    drawer: drawer,
     backgroundColor: AppColors.surfaceAlternative,
     body: LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(

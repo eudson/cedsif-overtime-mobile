@@ -7,4 +7,6 @@ abstract interface class AuthRepository {
     required String nuit,
     required String password,
   });
+
+  Future<Either<Failure, Unit>> logout();
 }

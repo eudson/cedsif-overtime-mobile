@@ -8,6 +8,9 @@ import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
 import 'package:cedsif_overtime_mobile/core/error/failures.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/facial_validation_stub_page.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/login_page.dart';
+import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/logout_usecase.dart';
+import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
+import 'package:cedsif_overtime_mobile/features/auth/presentation/widgets/session_menu_drawer.dart';
 import 'package:cedsif_overtime_mobile/features/history/presentation/pages/history_page.dart';
 import 'package:cedsif_overtime_mobile/features/home/presentation/pages/home_page.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/overtime_session.dart';
@@ -57,6 +60,12 @@ class _SessionRefresh extends ChangeNotifier {
   void trigger() => notifyListeners();
 }
 
+class _FakeLogoutUseCase implements LogoutUseCase {
+  @override
+  Future<Either<Failure, Unit>> call() async =>
+      const Right<Failure, Unit>(unit);
+}
+
 ProviderScope _testScope(Widget child, {OvertimeRepository? repository}) =>
     ProviderScope(
       overrides: [
@@ -66,6 +75,7 @@ ProviderScope _testScope(Widget child, {OvertimeRepository? repository}) =>
         overtimeClockProvider.overrideWithValue(
           () => DateTime(2026, 8, 13, 10),
         ),
+        logoutUseCaseProvider.overrideWithValue(_FakeLogoutUseCase()),
       ],
       child: child,
     );
@@ -122,6 +132,26 @@ void main() {
 
     expect(router.state.uri.path, RouteConstants.facialValidation);
     expect(find.byType(FacialValidationStubPage), findsOneWidget);
+  });
+
+  testWidgets('authenticated Home exposes the approved session menu', (
+    tester,
+  ) async {
+    final router = createAppRouter(
+      initialLocation: RouteConstants.home,
+      hasValidSession: validSession,
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      _testScope(MaterialApp.router(routerConfig: router)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('navigation.menu'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SessionMenuDrawer), findsOneWidget);
   });
 
   testWidgets('closes an active offline session when its TTL expires', (

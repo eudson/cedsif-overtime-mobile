@@ -62,6 +62,7 @@ void main() {
     OvertimeSession? activeSession,
     Duration elapsed = Duration.zero,
     bool isBusy = false,
+    Widget? drawer,
   }) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -89,6 +90,7 @@ void main() {
               activeSession: activeSession,
               elapsed: elapsed,
               isBusy: isBusy,
+              drawer: drawer,
             ),
           ),
         ),
@@ -113,6 +115,14 @@ void main() {
     expect(find.text('Este mês'), findsOneWidget);
     expect(find.text('Horas aprovadas'), findsOneWidget);
     expect(find.text('18:30'), findsOneWidget);
+  });
+
+  testWidgets('forwards the authenticated session drawer', (tester) async {
+    const drawer = Drawer(child: Text('Terminar sessão'));
+
+    await pumpHome(tester, drawer: drawer);
+
+    expect(tester.widget<Scaffold>(find.byType(Scaffold)).drawer, drawer);
   });
 
   testWidgets('History destination invokes its navigation hook', (

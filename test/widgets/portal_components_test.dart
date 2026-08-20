@@ -236,4 +236,22 @@ void main() {
     await tester.tap(find.text('Histórico'));
     expect(selectedIndex, 1);
   });
+
+  testWidgets('AppScaffold hamburger opens its supplied drawer', (
+    tester,
+  ) async {
+    await pumpComponent(
+      tester,
+      const AppScaffold(
+        showTopBar: true,
+        drawer: Drawer(child: Text('Terminar sessão')),
+        body: Text('Conteúdo'),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Menu'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Terminar sessão'), findsOneWidget);
+  });
 }

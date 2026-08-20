@@ -72,4 +72,18 @@ void main() {
       throwsA(isA<FormatException>()),
     );
   });
+
+  test('posts the refresh token to the backend logout contract', () async {
+    final adapter = _RecordingAdapter();
+    final dio = Dio()..httpClientAdapter = adapter;
+    final dataSource = DioAuthRemoteDataSource(dio);
+
+    await dataSource.logout(refreshToken: 'refresh-token');
+
+    expect(adapter.request?.path, ApiEndpoints.logout);
+    expect(adapter.request?.method, 'POST');
+    expect(adapter.request?.data, <String, Object?>{
+      'refreshToken': 'refresh-token',
+    });
+  });
 }

@@ -8,9 +8,12 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:cedsif_overtime_mobile/core/error/failures.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/login_usecase.dart';
+import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
 
 class _MockLoginUseCase extends Mock implements LoginUseCase {}
+
+class _MockLogoutUseCase extends Mock implements LogoutUseCase {}
 
 void main() {
   late _MockLoginUseCase useCase;
@@ -74,5 +77,50 @@ void main() {
     expect(second, isFalse);
     expect(await first, isTrue);
     verify(() => useCase(nuit: '123456789', password: 'secret')).called(1);
+  });
+
+  test('exposes logout progress and success', () async {
+    final logoutUseCase = _MockLogoutUseCase();
+    final completer = Completer<Either<Failure, Unit>>();
+    when(logoutUseCase.call).thenAnswer((_) => completer.future);
+    final logoutContainer = ProviderContainer(
+      overrides: <Override>[
+        logoutUseCaseProvider.overrideWithValue(logoutUseCase),
+      ],
+    );
+    addTearDown(logoutContainer.dispose);
+
+    final operation = logoutContainer
+        .read(logoutNotifierProvider.notifier)
+        .logout();
+
+    expect(logoutContainer.read(logoutNotifierProvider).isLoading, isTrue);
+    completer.complete(const Right<Failure, Unit>(unit));
+    expect(await operation, isTrue);
+    expect(logoutContainer.read(logoutNotifierProvider).isLoading, isFalse);
+    expect(logoutContainer.read(logoutNotifierProvider).errorKey, isNull);
+  });
+
+  test('exposes logout failure for localized presentation', () async {
+    final logoutUseCase = _MockLogoutUseCase();
+    when(logoutUseCase.call).thenAnswer(
+      (_) async => const Left<Failure, Unit>(CacheFailure('errors.generic')),
+    );
+    final logoutContainer = ProviderContainer(
+      overrides: <Override>[
+        logoutUseCaseProvider.overrideWithValue(logoutUseCase),
+      ],
+    );
+    addTearDown(logoutContainer.dispose);
+
+    final succeeded = await logoutContainer
+        .read(logoutNotifierProvider.notifier)
+        .logout();
+
+    expect(succeeded, isFalse);
+    expect(
+      logoutContainer.read(logoutNotifierProvider).errorKey,
+      'errors.generic',
+    );
   });
 }

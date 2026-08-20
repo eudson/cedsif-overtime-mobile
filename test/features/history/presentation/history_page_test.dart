@@ -40,6 +40,7 @@ void main() {
   Future<void> pumpHistory(
     WidgetTester tester, {
     List<HistoryEntry>? entries,
+    Widget? drawer,
   }) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -60,7 +61,7 @@ void main() {
             locale: context.locale,
             supportedLocales: context.supportedLocales,
             localizationsDelegates: context.localizationDelegates,
-            home: HistoryPage(entries: entries),
+            home: HistoryPage(entries: entries, drawer: drawer),
           ),
         ),
       ),
@@ -112,5 +113,13 @@ void main() {
 
     expect(find.text('Histórico'), findsNWidgets(2));
     expect(find.byType(HistoryEntryCard), findsNothing);
+  });
+
+  testWidgets('forwards the authenticated session drawer', (tester) async {
+    const drawer = Drawer(child: Text('Terminar sessão'));
+
+    await pumpHistory(tester, drawer: drawer);
+
+    expect(tester.widget<Scaffold>(find.byType(Scaffold)).drawer, drawer);
   });
 }

@@ -127,6 +127,7 @@ void main() {
       for (final path in <String>[
         ApiEndpoints.login,
         ApiEndpoints.refreshToken,
+        ApiEndpoints.logout,
       ]) {
         final options = RequestOptions(path: path);
 

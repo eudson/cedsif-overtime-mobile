@@ -41,6 +41,7 @@ void main() {
     WidgetTester tester, {
     VoidCallback? onSubmit,
     VoidCallback? onResume,
+    Widget? drawer,
   }) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -72,6 +73,7 @@ void main() {
               elapsed: const Duration(hours: 2, minutes: 47),
               onSubmit: onSubmit,
               onResume: onResume,
+              drawer: drawer,
             ),
           ),
         ),
@@ -96,6 +98,14 @@ void main() {
     expect(find.text('Enviar ao e-SNGRHE'), findsOneWidget);
     expect(find.text('Retomar contagem'), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
+  });
+
+  testWidgets('forwards the authenticated session drawer', (tester) async {
+    const drawer = Drawer(child: Text('Terminar sessão'));
+
+    await pumpReview(tester, drawer: drawer);
+
+    expect(tester.widget<Scaffold>(find.byType(Scaffold)).drawer, drawer);
   });
 
   testWidgets('submit and resume actions invoke their callbacks', (

@@ -71,6 +71,7 @@ class TokenRefreshInterceptor extends Interceptor {
   static const Set<String> _publicAuthPaths = <String>{
     ApiEndpoints.login,
     ApiEndpoints.refreshToken,
+    ApiEndpoints.logout,
   };
 
   Future<bool> _refreshOnce() {

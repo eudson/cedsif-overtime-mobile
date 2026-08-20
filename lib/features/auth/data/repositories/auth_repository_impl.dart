@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
 
@@ -35,6 +37,36 @@ class AuthRepositoryImpl implements AuthRepository {
     } on Object catch (error) {
       await _clearPartialTokens();
       return Left<Failure, Unit>(ErrorHandler.handle(error));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> logout() async {
+    String? refreshToken;
+    try {
+      refreshToken = await _secureStorage.readRefreshToken();
+    } on Object {
+      // Local sign-out still proceeds if a stored token cannot be read.
+    }
+
+    try {
+      await _secureStorage.clearTokens();
+    } on Object catch (error) {
+      return Left<Failure, Unit>(ErrorHandler.handle(error));
+    }
+
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      unawaited(_revokeRemoteSession(refreshToken));
+    }
+    return const Right<Failure, Unit>(unit);
+  }
+
+  Future<void> _revokeRemoteSession(String refreshToken) async {
+    try {
+      await _dataSource.logout(refreshToken: refreshToken);
+    } on Object {
+      // CEDSIF-CONFIRM: local sign-out remains available offline; remote
+      // revocation then relies on the refresh session's server-side expiry.
     }
   }
 

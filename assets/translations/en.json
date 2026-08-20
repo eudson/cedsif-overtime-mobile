@@ -3,7 +3,10 @@
     "title": "Horas Extras"
   },
   "auth": {
-    "invalidCredentials": "Invalid NUIT or password"
+    "invalidCredentials": "Invalid NUIT or password",
+    "logout": "Sign out",
+    "logoutConfirmTitle": "Sign out?",
+    "logoutConfirmMessage": "You will need to sign in again to continue."
   },
   "home": {
     "placeholder": "Home"
@@ -19,7 +22,8 @@
   },
   "common": {
     "retry": "Retry",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "confirm": "Confirm"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",

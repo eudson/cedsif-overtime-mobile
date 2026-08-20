@@ -53,6 +53,7 @@ class AuthHeaderInterceptor extends Interceptor {
   static const Set<String> _publicAuthPaths = <String>{
     ApiEndpoints.login,
     ApiEndpoints.refreshToken,
+    ApiEndpoints.logout,
   };
 }
 

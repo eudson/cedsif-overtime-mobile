@@ -16,6 +16,7 @@ class AppScaffold extends StatelessWidget {
     this.currentIndex = 0,
     this.onDestinationSelected,
     this.onMenuPressed,
+    this.drawer,
     this.backgroundColor = AppColors.background,
     super.key,
   });
@@ -26,6 +27,7 @@ class AppScaffold extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int>? onDestinationSelected;
   final VoidCallback? onMenuPressed;
+  final Widget? drawer;
   final Color backgroundColor;
 
   @override
@@ -33,6 +35,7 @@ class AppScaffold extends StatelessWidget {
     value: AppTheme.systemUiOverlayStyle,
     child: Scaffold(
       backgroundColor: backgroundColor,
+      drawer: drawer,
       body: ColoredBox(
         color: AppColors.canvas,
         child: SafeArea(
@@ -42,7 +45,15 @@ class AppScaffold extends StatelessWidget {
             child: Column(
               children: [
                 if (showTopBar)
-                  _PortalTopBar(onMenuPressed: onMenuPressed)
+                  Builder(
+                    builder: (topBarContext) => _PortalTopBar(
+                      onMenuPressed:
+                          onMenuPressed ??
+                          (drawer == null
+                              ? null
+                              : () => Scaffold.of(topBarContext).openDrawer()),
+                    ),
+                  )
                 else
                   const SizedBox.shrink(),
                 Expanded(child: body),

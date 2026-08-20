@@ -13,7 +13,10 @@
     "invalidNuit": "Introduza um NUIT válido de 9 dígitos",
     "invalidCredentials": "NUIT ou senha inválidos",
     "facialValidation": "Validação facial",
-    "continue": "Continuar"
+    "continue": "Continuar",
+    "logout": "Terminar sessão",
+    "logoutConfirmTitle": "Terminar sessão?",
+    "logoutConfirmMessage": "Terá de iniciar sessão novamente para continuar."
   },
   "home": {
     "greeting": "Bom dia,",
@@ -86,7 +89,8 @@
   },
   "common": {
     "retry": "Tentar novamente",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "confirm": "Confirmar"
   },
   "errors": {
     "generic": "Ocorreu um erro. Tente novamente.",

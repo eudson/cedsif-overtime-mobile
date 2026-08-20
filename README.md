@@ -150,6 +150,16 @@ must go online to authenticate again. This client-side route gate supports
 offline usability; the backend remains the authority for every protected API
 request.
 
+The hamburger menu exposes a confirmation-protected logout action. When online,
+the app revokes the refresh session through `POST /auth/logout` before clearing
+local credentials. Offline logout still clears local credentials immediately;
+unsynchronized overtime data is retained, while remote revocation relies on the
+refresh session's server-side expiry.
+
+**CEDSIF discussion item:** the current delivery assumes one FAE per app
+installation. Before supporting shared devices, queued writes must be bound to
+the originating FAE so a later login cannot replay another FAE's pending work.
+
 **CEDSIF discussion item — not implemented:** CEDSIF may consider allowing a
 separate, longer offline-login window using a salted password-derived verifier
 stored in hardware-backed secure storage. That option requires explicit

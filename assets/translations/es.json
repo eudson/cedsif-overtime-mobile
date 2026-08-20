@@ -3,7 +3,10 @@
     "title": "Horas Extras"
   },
   "auth": {
-    "invalidCredentials": "NUIT o contraseña no válidos"
+    "invalidCredentials": "NUIT o contraseña no válidos",
+    "logout": "Cerrar sesión",
+    "logoutConfirmTitle": "¿Cerrar sesión?",
+    "logoutConfirmMessage": "Tendrá que iniciar sesión de nuevo para continuar."
   },
   "home": {
     "placeholder": "Inicio"
@@ -19,7 +22,8 @@
   },
   "common": {
     "retry": "Reintentar",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "confirm": "Confirmar"
   },
   "errors": {
     "generic": "Algo salió mal. Inténtalo de nuevo.",

@@ -45,12 +45,14 @@ class HistoryPage extends StatelessWidget {
     this.entries,
     this.onHomeSelected,
     this.onHistorySelected,
+    this.drawer,
     super.key,
   });
 
   final List<HistoryEntry>? entries;
   final VoidCallback? onHomeSelected;
   final VoidCallback? onHistorySelected;
+  final Widget? drawer;
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +62,7 @@ class HistoryPage extends StatelessWidget {
       showTopBar: true,
       showBottomNavigation: true,
       currentIndex: 1,
-      onMenuPressed: () {},
+      drawer: drawer,
       onDestinationSelected: (index) {
         switch (index) {
           case 0:

@@ -18,6 +18,7 @@ class HomePage extends StatelessWidget {
     this.elapsed = Duration.zero,
     this.isBusy = false,
     this.errorMessage,
+    this.drawer,
     super.key,
   });
 
@@ -28,6 +29,7 @@ class HomePage extends StatelessWidget {
   final Duration elapsed;
   final bool isBusy;
   final String? errorMessage;
+  final Widget? drawer;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +38,7 @@ class HomePage extends StatelessWidget {
       showTopBar: true,
       showBottomNavigation: !running,
       currentIndex: 0,
-      onMenuPressed: () {},
+      drawer: drawer,
       onDestinationSelected: (index) {
         if (index == 1) {
           onHistorySelected?.call();
