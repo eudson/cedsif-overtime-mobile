@@ -39,6 +39,18 @@ void main() {
     },
   );
 
+  test('exposes the valid JWT expiry for an exact offline TTL', () async {
+    when(
+      storage.readAccessToken,
+    ).thenAnswer((_) async => tokenExpiringAt(2001));
+    final service = AuthSessionService(storage, now: () => now);
+
+    expect(
+      await service.validUntil(),
+      DateTime.fromMillisecondsSinceEpoch(2001 * 1000, isUtc: true),
+    );
+  });
+
   test('clears an expired cached session and requires online login', () async {
     when(
       storage.readAccessToken,

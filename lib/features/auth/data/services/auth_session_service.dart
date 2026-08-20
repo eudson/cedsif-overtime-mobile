@@ -10,19 +10,39 @@ class AuthSessionService {
   final SecureStorage _secureStorage;
   final SessionClock _now;
 
-  Future<bool> hasValidSession() async {
+  Future<DateTime?> validUntil() async {
+    final String? accessToken;
     try {
-      final accessToken = await _secureStorage.readAccessToken();
-      if (accessToken == null || accessToken.isEmpty) {
-        return false;
-      }
-      if (!JwtDecoder.isExpired(accessToken, now: _now())) {
-        return true;
-      }
-      await _clearExpiredSession();
-      return false;
+      accessToken = await _secureStorage.readAccessToken();
     } on Object {
-      return false;
+      return null;
+    }
+
+    final expiry = _expiryOf(accessToken);
+    if (expiry != null && expiry.isAfter(_now().toUtc())) {
+      return expiry;
+    }
+    await _clearExpiredSession();
+    return null;
+  }
+
+  Future<bool> hasValidSession() async => await validUntil() != null;
+
+  DateTime? _expiryOf(String? accessToken) {
+    if (accessToken == null || accessToken.isEmpty) {
+      return null;
+    }
+    final expiry = JwtDecoder.decode(accessToken)?['exp'];
+    if (expiry is! num || !expiry.isFinite || expiry < 0) {
+      return null;
+    }
+    try {
+      return DateTime.fromMillisecondsSinceEpoch(
+        (expiry * Duration.millisecondsPerSecond).round(),
+        isUtc: true,
+      );
+    } on RangeError {
+      return null;
     }
   }
 

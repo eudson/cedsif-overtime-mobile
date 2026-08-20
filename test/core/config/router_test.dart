@@ -53,6 +53,10 @@ class _MemoryOvertimeRepository implements OvertimeRepository {
   }
 }
 
+class _SessionRefresh extends ChangeNotifier {
+  void trigger() => notifyListeners();
+}
+
 ProviderScope _testScope(Widget child, {OvertimeRepository? repository}) =>
     ProviderScope(
       overrides: [
@@ -118,6 +122,33 @@ void main() {
 
     expect(router.state.uri.path, RouteConstants.facialValidation);
     expect(find.byType(FacialValidationStubPage), findsOneWidget);
+  });
+
+  testWidgets('closes an active offline session when its TTL expires', (
+    tester,
+  ) async {
+    var valid = true;
+    final refresh = _SessionRefresh();
+    final router = createAppRouter(
+      initialLocation: RouteConstants.home,
+      hasValidSession: () async => valid,
+      sessionRefresh: refresh,
+    );
+    addTearDown(router.dispose);
+    addTearDown(refresh.dispose);
+
+    await tester.pumpWidget(
+      _testScope(MaterialApp.router(routerConfig: router)),
+    );
+    await tester.pumpAndSettle();
+    expect(router.state.uri.path, RouteConstants.home);
+
+    valid = false;
+    refresh.trigger();
+    await tester.pumpAndSettle();
+
+    expect(router.state.uri.path, RouteConstants.login);
+    expect(find.byType(LoginPage), findsOneWidget);
   });
 
   testWidgets('exposes facial-validation and Home destinations', (

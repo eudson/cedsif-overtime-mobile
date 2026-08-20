@@ -13,6 +13,33 @@ import 'package:cedsif_overtime_mobile/features/overtime/presentation/pages/over
 
 typedef SessionValidator = Future<bool> Function();
 
+final class SessionExpiryRefresh extends ChangeNotifier {
+  SessionExpiryRefresh({DateTime Function()? now}) : _now = now ?? DateTime.now;
+
+  final DateTime Function() _now;
+  Timer? _timer;
+  DateTime? _scheduledExpiry;
+
+  void schedule(DateTime? expiry) {
+    if (_scheduledExpiry == expiry && _timer?.isActive == true) {
+      return;
+    }
+    _timer?.cancel();
+    _scheduledExpiry = expiry;
+    if (expiry == null) {
+      return;
+    }
+    final delay = expiry.difference(_now().toUtc());
+    _timer = Timer(delay.isNegative ? Duration.zero : delay, notifyListeners);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+}
+
 Future<String?> appRedirect(
   BuildContext? context,
   GoRouterState state, {
@@ -33,12 +60,14 @@ Future<String?> appRedirect(
 GoRouter createAppRouter({
   String initialLocation = RouteConstants.splash,
   SessionValidator? hasValidSession,
+  Listenable? sessionRefresh,
 }) {
   final validateSession = hasValidSession ?? () async => false;
   return GoRouter(
     initialLocation: initialLocation,
     redirect: (context, state) =>
         appRedirect(context, state, hasValidSession: validateSession),
+    refreshListenable: sessionRefresh,
     routes: <RouteBase>[
       GoRoute(
         path: RouteConstants.splash,
@@ -70,10 +99,21 @@ GoRouter createAppRouter({
 
 final routerProvider = Provider<GoRouter>((ref) {
   final sessionService = ref.watch(authSessionServiceProvider);
+  final sessionRefresh = SessionExpiryRefresh();
+  Future<bool> validateSession() async {
+    final expiry = await sessionService.validUntil();
+    sessionRefresh.schedule(expiry);
+    return expiry != null;
+  }
+
   final router = createAppRouter(
-    hasValidSession: sessionService.hasValidSession,
+    hasValidSession: validateSession,
+    sessionRefresh: sessionRefresh,
   );
-  ref.onDispose(router.dispose);
+  ref.onDispose(() {
+    router.dispose();
+    sessionRefresh.dispose();
+  });
   return router;
 });
 
