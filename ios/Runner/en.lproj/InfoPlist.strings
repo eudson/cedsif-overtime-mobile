@@ -1,1 +1,2 @@
 "NSCameraUsageDescription" = "The camera is used to capture your face during identity verification.";
+"NSLocationWhenInUseUsageDescription" = "Your location is used when starting overtime to validate the work-unit perimeter.";

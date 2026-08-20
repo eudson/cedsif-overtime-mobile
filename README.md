@@ -126,6 +126,16 @@ verifier in staging or production. Developers can enable or disable the flow by
 changing `ENV` in the selected `.env.dev` or ignored `.env.local` file and
 restarting the app.
 
+### Location capture and geofence authority
+
+The application requests foreground location only when an overtime start needs
+a fresh coordinate. It does not request background or always-on access and does
+not continuously track the user. The mobile app sends latitude and longitude to
+the API; the backend is authoritative for the employee's work-unit perimeter
+and returns `locationVerified`. The current backend defaults (200-metre radius;
+record and flag an outside start) remain marked for confirmation by CEDSIF and
+must not be duplicated as mobile constants.
+
 ## Architecture
 
 The application uses feature-first Clean Architecture:

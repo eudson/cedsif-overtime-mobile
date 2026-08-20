@@ -1,1 +1,2 @@
 "NSCameraUsageDescription" = "La cámara se utiliza para capturar su rostro durante la verificación de identidad.";
+"NSLocationWhenInUseUsageDescription" = "Su ubicación se utiliza al iniciar las horas extraordinarias para validar el perímetro de la unidad de trabajo.";

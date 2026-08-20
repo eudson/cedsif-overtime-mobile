@@ -3,10 +3,13 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cedsif_overtime_mobile/core/config/providers.dart';
+import 'package:cedsif_overtime_mobile/features/overtime/data/datasources/location_data_source.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/datasources/overtime_local_datasource.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/datasources/overtime_remote_datasource.dart';
+import 'package:cedsif_overtime_mobile/features/overtime/data/repositories/location_repository_impl.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/repositories/overtime_repository_impl.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/overtime_session.dart';
+import 'package:cedsif_overtime_mobile/features/overtime/domain/repositories/location_repository.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/domain/repositories/overtime_repository.dart';
 
 typedef OvertimeClock = DateTime Function();
@@ -19,6 +22,18 @@ final overtimeLocalDataSourceProvider = Provider<OvertimeLocalDataSource>(
 
 final overtimeRemoteDataSourceProvider = Provider<OvertimeRemoteDataSource>(
   (ref) => DioOvertimeRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final locationPlatformProvider = Provider<LocationPlatform>(
+  (ref) => const PluginLocationPlatform(),
+);
+
+final locationDataSourceProvider = Provider<LocationDataSource>(
+  (ref) => ForegroundLocationDataSource(ref.watch(locationPlatformProvider)),
+);
+
+final locationRepositoryProvider = Provider<LocationRepository>(
+  (ref) => LocationRepositoryImpl(ref.watch(locationDataSourceProvider)),
 );
 
 final overtimeRepositoryProvider = Provider<OvertimeRepository>(

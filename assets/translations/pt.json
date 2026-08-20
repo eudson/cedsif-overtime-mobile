@@ -45,6 +45,13 @@
   "history": {
     "title": "Histórico"
   },
+  "location": {
+    "servicesDisabled": "Ative os serviços de localização e tente novamente.",
+    "permissionDenied": "Autorize o acesso à localização para iniciar as horas extraordinárias.",
+    "permissionBlocked": "Autorize o acesso à localização nas definições do dispositivo.",
+    "timeout": "Não foi possível obter a localização a tempo. Tente novamente.",
+    "unavailable": "Não foi possível obter a localização. Tente novamente."
+  },
   "overtimeReview": {
     "title": "Contagem terminada",
     "subtitle": "Reveja e envie ao e-SNGRHE.",

@@ -18,6 +18,13 @@
   "home": {
     "placeholder": "Home"
   },
+  "location": {
+    "servicesDisabled": "Turn on location services and try again.",
+    "permissionDenied": "Allow location access to start overtime.",
+    "permissionBlocked": "Allow location access in the device settings.",
+    "timeout": "Your location could not be obtained in time. Please try again.",
+    "unavailable": "Your location could not be obtained. Please try again."
+  },
   "overtimeReview": {
     "title": "Counting stopped",
     "subtitle": "Review and submit to e-SNGRHE.",

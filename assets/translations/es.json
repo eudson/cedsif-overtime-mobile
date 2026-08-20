@@ -18,6 +18,13 @@
   "home": {
     "placeholder": "Inicio"
   },
+  "location": {
+    "servicesDisabled": "Active los servicios de ubicación e inténtelo de nuevo.",
+    "permissionDenied": "Permita el acceso a la ubicación para iniciar las horas extraordinarias.",
+    "permissionBlocked": "Permita el acceso a la ubicación en los ajustes del dispositivo.",
+    "timeout": "No se pudo obtener su ubicación a tiempo. Inténtelo de nuevo.",
+    "unavailable": "No se pudo obtener su ubicación. Inténtelo de nuevo."
+  },
   "overtimeReview": {
     "title": "Conteo terminado",
     "subtitle": "Revise y envíe a e-SNGRHE.",
