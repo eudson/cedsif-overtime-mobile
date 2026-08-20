@@ -2,6 +2,9 @@
   "app": {
     "title": "Horas Extras"
   },
+  "auth": {
+    "invalidCredentials": "Invalid NUIT or password"
+  },
   "home": {
     "placeholder": "Home"
   },

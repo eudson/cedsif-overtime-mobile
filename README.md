@@ -126,6 +126,27 @@ WorkManager is a non-critical bootstrap service. Initialization failures are iso
 
 WorkManager processes only generic, network-constrained queued requests. Networking injects secure credentials only for the configured first-party API origin, refreshes an expired session once, isolates cached GET responses by session scope and TTL, and never stores authorization values in cache keys or queued headers.
 
+### Authentication and offline sessions
+
+Login sends the FAE's NUIT and password to `POST /auth/login` through the auth
+data source, repository, and use case. Access and refresh tokens are stored in
+platform secure storage; the password and password-derived values are never
+persisted.
+
+After one successful online login, the application can reopen without network
+access only while the cached access JWT is unexpired. The backend currently
+issues access tokens with a 3,600-second default lifetime. An expired or
+malformed access token is cleared together with its refresh token, and the FAE
+must go online to authenticate again. This client-side route gate supports
+offline usability; the backend remains the authority for every protected API
+request.
+
+**CEDSIF discussion item — not implemented:** CEDSIF may consider allowing a
+separate, longer offline-login window using a salted password-derived verifier
+stored in hardware-backed secure storage. That option requires explicit
+agreement on its offline TTL, failed-attempt lockout, credential-revocation
+behavior, device-compromise risk, and audit requirements before implementation.
+
 ## Bootstrap scope
 
 The current home feature is a neutral architecture proof that renders localized placeholder content. No employee, timesheet, overtime-rate, approval, payroll, attendance, or calculation policy has been assumed.

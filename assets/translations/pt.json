@@ -11,6 +11,7 @@
     "forgotPassword": "Esqueceu a senha?",
     "required": "Campo obrigatório",
     "invalidNuit": "Introduza um NUIT válido de 9 dígitos",
+    "invalidCredentials": "NUIT ou senha inválidos",
     "facialValidation": "Validação facial",
     "continue": "Continuar"
   },

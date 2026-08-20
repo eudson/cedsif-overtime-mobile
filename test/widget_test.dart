@@ -63,7 +63,10 @@ void main() {
     tester,
   ) async {
     final eventBus = AuthEventBus();
-    final router = createAppRouter(initialLocation: RouteConstants.home);
+    final router = createAppRouter(
+      initialLocation: RouteConstants.home,
+      hasValidSession: () async => true,
+    );
     addTearDown(eventBus.dispose);
     addTearDown(router.dispose);
 

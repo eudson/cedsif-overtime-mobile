@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
-import 'package:go_router/go_router.dart';
-import 'package:mocktail/mocktail.dart';
 
 import 'package:cedsif_overtime_mobile/core/config/router.dart';
 import 'package:cedsif_overtime_mobile/core/constants/constants.dart';
@@ -16,8 +14,6 @@ import 'package:cedsif_overtime_mobile/features/overtime/domain/entities/overtim
 import 'package:cedsif_overtime_mobile/features/overtime/domain/repositories/overtime_repository.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/presentation/providers/overtime_provider.dart';
 import 'package:cedsif_overtime_mobile/widgets/app_button.dart';
-
-class _MockGoRouterState extends Mock implements GoRouterState {}
 
 class _MemoryOvertimeRepository implements OvertimeRepository {
   OvertimeSession? active;
@@ -71,12 +67,11 @@ ProviderScope _testScope(Widget child, {OvertimeRepository? repository}) =>
     );
 
 void main() {
-  test('appRedirect is a named pass-through hook', () {
-    expect(appRedirect(null, _MockGoRouterState()), isNull);
-  });
+  Future<bool> validSession() async => true;
+  Future<bool> missingSession() async => false;
 
   testWidgets('splash advances to the Login page', (tester) async {
-    final router = createAppRouter();
+    final router = createAppRouter(hasValidSession: missingSession);
     addTearDown(router.dispose);
 
     await tester.pumpWidget(
@@ -85,16 +80,53 @@ void main() {
     expect(router.state.uri.path, RouteConstants.splash);
 
     await tester.pump(AppConstants.splashDuration);
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(router.state.uri.path, RouteConstants.login);
     expect(find.byType(LoginPage), findsOneWidget);
   });
 
+  testWidgets('protects application routes without a valid session', (
+    tester,
+  ) async {
+    final router = createAppRouter(
+      initialLocation: RouteConstants.home,
+      hasValidSession: missingSession,
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      _testScope(MaterialApp.router(routerConfig: router)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(router.state.uri.path, RouteConstants.login);
+    expect(find.byType(LoginPage), findsOneWidget);
+  });
+
+  testWidgets('skips login while the cached JWT remains valid', (tester) async {
+    final router = createAppRouter(
+      initialLocation: RouteConstants.login,
+      hasValidSession: validSession,
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      _testScope(MaterialApp.router(routerConfig: router)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(router.state.uri.path, RouteConstants.facialValidation);
+    expect(find.byType(FacialValidationStubPage), findsOneWidget);
+  });
+
   testWidgets('exposes facial-validation and Home destinations', (
     tester,
   ) async {
-    final router = createAppRouter(initialLocation: RouteConstants.login);
+    final router = createAppRouter(
+      initialLocation: RouteConstants.login,
+      hasValidSession: validSession,
+    );
     addTearDown(router.dispose);
 
     await tester.pumpWidget(
@@ -116,12 +148,14 @@ void main() {
   testWidgets('facial-validation Continue action opens Home', (tester) async {
     final router = createAppRouter(
       initialLocation: RouteConstants.facialValidation,
+      hasValidSession: validSession,
     );
     addTearDown(router.dispose);
 
     await tester.pumpWidget(
       _testScope(MaterialApp.router(routerConfig: router)),
     );
+    await tester.pumpAndSettle();
 
     expect(find.byType(FacialValidationStubPage), findsOneWidget);
     expect(find.byType(AppButton), findsOneWidget);
@@ -136,12 +170,16 @@ void main() {
   testWidgets('bottom navigation moves between Home and History', (
     tester,
   ) async {
-    final router = createAppRouter(initialLocation: RouteConstants.home);
+    final router = createAppRouter(
+      initialLocation: RouteConstants.home,
+      hasValidSession: validSession,
+    );
     addTearDown(router.dispose);
 
     await tester.pumpWidget(
       _testScope(MaterialApp.router(routerConfig: router)),
     );
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('navigation.history'));
     await tester.pumpAndSettle();
@@ -158,7 +196,10 @@ void main() {
     tester,
   ) async {
     final repository = _MemoryOvertimeRepository();
-    final router = createAppRouter(initialLocation: RouteConstants.home);
+    final router = createAppRouter(
+      initialLocation: RouteConstants.home,
+      hasValidSession: validSession,
+    );
     addTearDown(router.dispose);
 
     await tester.pumpWidget(
@@ -167,7 +208,7 @@ void main() {
         repository: repository,
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('home-start-button')));
     await tester.pump();
@@ -195,7 +236,10 @@ void main() {
 
   testWidgets('review can resume the same counting session', (tester) async {
     final repository = _MemoryOvertimeRepository();
-    final router = createAppRouter(initialLocation: RouteConstants.home);
+    final router = createAppRouter(
+      initialLocation: RouteConstants.home,
+      hasValidSession: validSession,
+    );
     addTearDown(router.dispose);
 
     await tester.pumpWidget(
@@ -204,7 +248,7 @@ void main() {
         repository: repository,
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('home-start-button')));
     await tester.pump();
     await tester.tap(find.text('home.stop'));
@@ -228,7 +272,10 @@ void main() {
         endedAt: DateTime(2026, 8, 13, 10),
         status: OvertimeSessionStatus.reviewing,
       );
-    final router = createAppRouter(initialLocation: RouteConstants.home);
+    final router = createAppRouter(
+      initialLocation: RouteConstants.home,
+      hasValidSession: validSession,
+    );
     addTearDown(router.dispose);
 
     await tester.pumpWidget(
@@ -237,7 +284,7 @@ void main() {
         repository: repository,
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('overtimeReview.title'), findsOneWidget);
     expect(find.text('overtimeReview.submit'), findsOneWidget);
