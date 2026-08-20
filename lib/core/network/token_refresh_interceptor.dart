@@ -41,7 +41,7 @@ class TokenRefreshInterceptor extends Interceptor {
     if (err.response?.statusCode != 401 ||
         !RequestOrigin.isAllowed(request, _apiBaseUrl) ||
         request.extra[retryMarker] == true ||
-        request.path == ApiEndpoints.refreshToken) {
+        _publicAuthPaths.contains(request.path)) {
       handler.next(err);
       return;
     }
@@ -67,6 +67,11 @@ class TokenRefreshInterceptor extends Interceptor {
       handler.next(retryError);
     }
   }
+
+  static const Set<String> _publicAuthPaths = <String>{
+    ApiEndpoints.login,
+    ApiEndpoints.refreshToken,
+  };
 
   Future<bool> _refreshOnce() {
     final active = _activeRefresh;

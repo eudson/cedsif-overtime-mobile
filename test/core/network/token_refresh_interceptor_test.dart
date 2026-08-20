@@ -224,4 +224,34 @@ void main() {
 
     expect(cacheCleared, isTrue);
   });
+
+  test('login rejection never attempts token refresh', () async {
+    var refreshCalls = 0;
+    final requestDio = Dio(BaseOptions(baseUrl: 'https://example.test'));
+    final refreshDio = Dio(BaseOptions(baseUrl: 'https://example.test'));
+    requestDio.httpClientAdapter = _QueueAdapter(
+      (_) async => _jsonResponse(401, <String, Object?>{'error': 'invalid'}),
+    );
+    refreshDio.httpClientAdapter = _QueueAdapter((_) async {
+      refreshCalls += 1;
+      return _jsonResponse(500, <String, Object?>{'error': 'unexpected'});
+    });
+    requestDio.interceptors.add(
+      TokenRefreshInterceptor(
+        dio: requestDio,
+        refreshDio: refreshDio,
+        secureStorage: storage,
+        authEventBus: eventBus,
+      ),
+    );
+
+    await expectLater(
+      requestDio.post<dynamic>(ApiEndpoints.login),
+      throwsA(isA<DioException>()),
+    );
+
+    expect(refreshCalls, 0);
+    verifyNever(storage.readRefreshToken);
+    verifyNever(storage.clearTokens);
+  });
 }

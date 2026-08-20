@@ -6,6 +6,7 @@ import 'package:hive/hive.dart';
 import 'package:logger/logger.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:cedsif_overtime_mobile/core/constants/api_endpoints.dart';
 import 'package:cedsif_overtime_mobile/core/network/auth_event_bus.dart';
 import 'package:cedsif_overtime_mobile/core/network/cache_interceptor.dart';
 import 'package:cedsif_overtime_mobile/core/network/network_client.dart';
@@ -88,6 +89,31 @@ void main() {
     expect(options.headers, isNot(contains('Authorization')));
     verify(() => handler.next(options)).called(1);
   });
+
+  test(
+    'auth interceptor never attaches credentials to auth endpoints',
+    () async {
+      final storage = _MockSecureStorage();
+      when(storage.readAccessToken).thenAnswer((_) async => 'stale-token');
+      final interceptor = AuthHeaderInterceptor(
+        storage,
+        apiBaseUrl: 'https://example.test',
+      );
+      final handler = _RequestHandler();
+
+      for (final path in <String>[
+        ApiEndpoints.login,
+        ApiEndpoints.refreshToken,
+      ]) {
+        final options = RequestOptions(path: path);
+
+        await interceptor.onRequest(options, handler);
+
+        expect(options.headers, isNot(contains('Authorization')));
+      }
+      verifyNever(storage.readAccessToken);
+    },
+  );
 
   test('builds the stable production interceptor order', () {
     final client = NetworkClient.create(

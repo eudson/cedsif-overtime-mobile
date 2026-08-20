@@ -7,6 +7,7 @@ import 'package:hive/hive.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
 import 'package:cedsif_overtime_mobile/core/config/environment_config.dart';
+import 'package:cedsif_overtime_mobile/core/constants/api_endpoints.dart';
 import 'package:cedsif_overtime_mobile/core/network/auth_event_bus.dart';
 import 'package:cedsif_overtime_mobile/core/network/cache_interceptor.dart';
 import 'package:cedsif_overtime_mobile/core/network/network_monitor.dart';
@@ -37,7 +38,8 @@ class AuthHeaderInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    if (!RequestOrigin.isAllowed(options, _apiBaseUrl)) {
+    if (!RequestOrigin.isAllowed(options, _apiBaseUrl) ||
+        _publicAuthPaths.contains(options.path)) {
       handler.next(options);
       return;
     }
@@ -47,6 +49,11 @@ class AuthHeaderInterceptor extends Interceptor {
     }
     handler.next(options);
   }
+
+  static const Set<String> _publicAuthPaths = <String>{
+    ApiEndpoints.login,
+    ApiEndpoints.refreshToken,
+  };
 }
 
 class NetworkClient {
