@@ -49,7 +49,7 @@ class DioOvertimeRemoteDataSource implements OvertimeRemoteDataSource {
         'latitude': latitude,
         'longitude': longitude,
         'biometricReference': biometricReference,
-        'startedAt': startedAt.toIso8601String(),
+        'startedAt': startedAt.toUtc().toIso8601String(),
       },
       options: _idempotentOptions(idempotencyKey),
     );
@@ -66,7 +66,7 @@ class DioOvertimeRemoteDataSource implements OvertimeRemoteDataSource {
       ApiEndpoints.overtimeEnd,
       data: <String, Object?>{
         'timeEntryId': timeEntryId,
-        'endedAt': endedAt.toIso8601String(),
+        'endedAt': endedAt.toUtc().toIso8601String(),
       },
       options: _idempotentOptions(idempotencyKey),
     );

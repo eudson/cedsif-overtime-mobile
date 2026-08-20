@@ -4,16 +4,23 @@ import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
 
 import 'package:cedsif_overtime_mobile/core/error/error_handler.dart';
+import 'package:cedsif_overtime_mobile/core/auth/session_mutation_coordinator.dart';
 import 'package:cedsif_overtime_mobile/core/error/failures.dart';
 import 'package:cedsif_overtime_mobile/core/storage/secure_storage.dart';
 import 'package:cedsif_overtime_mobile/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/repositories/auth_repository.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
-  const AuthRepositoryImpl(this._dataSource, this._secureStorage);
+  AuthRepositoryImpl(
+    this._dataSource,
+    this._secureStorage, {
+    SessionMutationCoordinator? sessionMutationCoordinator,
+  }) : _sessionMutationCoordinator =
+           sessionMutationCoordinator ?? SessionMutationCoordinator.shared;
 
   final AuthRemoteDataSource _dataSource;
   final SecureStorage _secureStorage;
+  final SessionMutationCoordinator _sessionMutationCoordinator;
 
   @override
   Future<Either<Failure, Unit>> login({
@@ -22,9 +29,11 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     try {
       final response = await _dataSource.login(nuit: nuit, password: password);
-      await _secureStorage.writeTokens(
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
+      await _sessionMutationCoordinator.run(
+        () => _secureStorage.writeTokens(
+          accessToken: response.accessToken,
+          refreshToken: response.refreshToken,
+        ),
       );
       return const Right<Failure, Unit>(unit);
     } on DioException catch (error) {
@@ -44,19 +53,21 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, Unit>> logout() async {
     String? refreshToken;
     try {
-      refreshToken = await _secureStorage.readRefreshToken();
-    } on Object {
-      // Local sign-out still proceeds if a stored token cannot be read.
-    }
-
-    try {
-      await _secureStorage.clearTokens();
+      await _sessionMutationCoordinator.run(() async {
+        try {
+          refreshToken = await _secureStorage.readRefreshToken();
+        } on Object {
+          // Local sign-out still proceeds if the stored token cannot be read.
+        }
+        await _secureStorage.clearTokens();
+      });
     } on Object catch (error) {
       return Left<Failure, Unit>(ErrorHandler.handle(error));
     }
 
-    if (refreshToken != null && refreshToken.isNotEmpty) {
-      unawaited(_revokeRemoteSession(refreshToken));
+    final tokenToRevoke = refreshToken;
+    if (tokenToRevoke != null && tokenToRevoke.isNotEmpty) {
+      unawaited(_revokeRemoteSession(tokenToRevoke));
     }
     return const Right<Failure, Unit>(unit);
   }
@@ -72,7 +83,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   Future<void> _clearPartialTokens() async {
     try {
-      await _secureStorage.clearTokens();
+      await _sessionMutationCoordinator.run(_secureStorage.clearTokens);
     } on Object {
       // The original secure-storage failure remains the reported failure.
     }

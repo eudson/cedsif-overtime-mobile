@@ -4,12 +4,18 @@ import 'package:cedsif_overtime_mobile/core/constants/api_endpoints.dart';
 import 'package:cedsif_overtime_mobile/core/sync/pending_request_model.dart';
 
 typedef PendingRequestClock = DateTime Function();
+typedef PendingRequestOwnerSubjectProvider = Future<String?> Function();
 
 class OvertimePendingRequestDataSource {
-  OvertimePendingRequestDataSource(this._box, {PendingRequestClock? clock})
-    : _clock = clock ?? DateTime.now;
+  OvertimePendingRequestDataSource(
+    this._box, {
+    required PendingRequestOwnerSubjectProvider ownerSubjectProvider,
+    PendingRequestClock? clock,
+  }) : _ownerSubjectProvider = ownerSubjectProvider,
+       _clock = clock ?? DateTime.now;
 
   final Box<dynamic> _box;
+  final PendingRequestOwnerSubjectProvider _ownerSubjectProvider;
   final PendingRequestClock _clock;
 
   Future<void> enqueueStart({
@@ -27,7 +33,7 @@ class OvertimePendingRequestDataSource {
       'latitude': latitude,
       'longitude': longitude,
       'biometricReference': biometricReference,
-      'startedAt': startedAt.toIso8601String(),
+      'startedAt': startedAt.toUtc().toIso8601String(),
     },
   );
 
@@ -40,7 +46,7 @@ class OvertimePendingRequestDataSource {
     idempotencyKey: idempotencyKey,
     body: <String, Object?>{
       'timeEntryId': timeEntryId,
-      'endedAt': endedAt.toIso8601String(),
+      'endedAt': endedAt.toUtc().toIso8601String(),
     },
   );
 
@@ -61,6 +67,10 @@ class OvertimePendingRequestDataSource {
     if (_box.containsKey(idempotencyKey)) {
       return;
     }
+    final ownerSubject = await _ownerSubjectProvider();
+    if (ownerSubject == null || ownerSubject.isEmpty) {
+      throw StateError('Authenticated employee subject is unavailable');
+    }
     final request = PendingRequestModel(
       method: 'POST',
       path: path,
@@ -72,7 +82,10 @@ class OvertimePendingRequestDataSource {
       createdAt: _clock().toUtc(),
       retryCount: 0,
     );
-    await _box.put(idempotencyKey, request.toJson());
+    await _box.put(idempotencyKey, <String, Object?>{
+      ...request.toJson(),
+      'ownerSubject': ownerSubject,
+    });
   }
 
   static String _formatDate(DateTime value) {

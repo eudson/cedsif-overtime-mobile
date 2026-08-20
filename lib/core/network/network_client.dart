@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
+import 'package:cedsif_overtime_mobile/core/auth/authenticated_subject.dart';
+import 'package:cedsif_overtime_mobile/core/auth/session_mutation_coordinator.dart';
 import 'package:cedsif_overtime_mobile/core/config/environment_config.dart';
 import 'package:cedsif_overtime_mobile/core/constants/api_endpoints.dart';
 import 'package:cedsif_overtime_mobile/core/network/auth_event_bus.dart';
@@ -43,6 +45,25 @@ class AuthHeaderInterceptor extends Interceptor {
       handler.next(options);
       return;
     }
+    final expectedSubject =
+        options.extra[AuthenticatedRequestContext.expectedSubjectKey];
+    if (expectedSubject is String) {
+      final headerSubject = AuthenticatedRequestContext.subjectFromBearerHeader(
+        options.headers['Authorization'],
+      );
+      if (headerSubject != expectedSubject) {
+        handler.reject(
+          DioException(
+            requestOptions: options,
+            type: DioExceptionType.cancel,
+            error: StateError('Authenticated request subject changed'),
+          ),
+        );
+        return;
+      }
+      handler.next(options);
+      return;
+    }
     final accessToken = await _secureStorage.readAccessToken();
     if (accessToken != null && accessToken.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $accessToken';
@@ -72,6 +93,8 @@ class NetworkClient {
     Duration? timeout,
     bool includeDebugLogger = kDebugMode,
     NetworkDioFactory dioFactory = Dio.new,
+    SessionMutationCoordinator? sessionMutationCoordinator,
+    bool enableTokenRefresh = true,
   }) {
     final resolvedTimeout = timeout ?? EnvironmentConfig.apiTimeout;
     final options = BaseOptions(
@@ -85,14 +108,17 @@ class NetworkClient {
     dio.interceptors.clear();
     dio.interceptors.addAll(<Interceptor>[
       AuthHeaderInterceptor(secureStorage, apiBaseUrl: baseUrl),
-      TokenRefreshInterceptor(
-        dio: dio,
-        refreshDio: refreshDio,
-        secureStorage: secureStorage,
-        authEventBus: authEventBus,
-        apiBaseUrl: baseUrl,
-        onSessionExpired: () => cacheBox.clear().then((_) {}),
-      ),
+      if (enableTokenRefresh)
+        TokenRefreshInterceptor(
+          dio: dio,
+          refreshDio: refreshDio,
+          secureStorage: secureStorage,
+          authEventBus: authEventBus,
+          sessionMutationCoordinator:
+              sessionMutationCoordinator ?? SessionMutationCoordinator.shared,
+          apiBaseUrl: baseUrl,
+          onSessionExpired: () => cacheBox.clear().then((_) {}),
+        ),
       CacheInterceptor(
         cacheBox: cacheBox,
         networkMonitor: networkMonitor,

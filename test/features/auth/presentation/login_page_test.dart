@@ -10,7 +10,9 @@ import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cedsif_overtime_mobile/core/config/providers.dart';
 import 'package:cedsif_overtime_mobile/core/error/failures.dart';
+import 'package:cedsif_overtime_mobile/core/sync/foreground_sync_coordinator.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/login_usecase.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
@@ -42,6 +44,9 @@ class _LoginTranslationsLoader extends AssetLoader {
 }
 
 class _MockLoginUseCase extends Mock implements LoginUseCase {}
+
+class _MockForegroundSyncCoordinator extends Mock
+    implements ForegroundSyncCoordinator {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -75,6 +80,9 @@ void main() {
       ProviderScope(
         overrides: <Override>[
           loginUseCaseProvider.overrideWithValue(resolvedUseCase),
+          foregroundSyncCoordinatorProvider.overrideWithValue(
+            _MockForegroundSyncCoordinator(),
+          ),
         ],
         child: EasyLocalization(
           supportedLocales: const [Locale('pt')],

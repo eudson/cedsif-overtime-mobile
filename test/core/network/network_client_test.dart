@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -6,6 +7,7 @@ import 'package:hive/hive.dart';
 import 'package:logger/logger.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:cedsif_overtime_mobile/core/auth/authenticated_subject.dart';
 import 'package:cedsif_overtime_mobile/core/constants/api_endpoints.dart';
 import 'package:cedsif_overtime_mobile/core/network/auth_event_bus.dart';
 import 'package:cedsif_overtime_mobile/core/network/cache_interceptor.dart';
@@ -22,6 +24,8 @@ class _MockNetworkMonitor extends Mock implements NetworkMonitor {}
 class _MockSecureStorage extends Mock implements SecureStorage {}
 
 class _RequestHandler extends Mock implements RequestInterceptorHandler {}
+
+class _DioExceptionFake extends Fake implements DioException {}
 
 class _RecordingAdapter implements HttpClientAdapter {
   bool isClosed = false;
@@ -78,7 +82,15 @@ class _RecordingSink implements AppLogSink {
   }
 }
 
+String _jwt(String subject) {
+  final payload = base64Url
+      .encode(utf8.encode(jsonEncode(<String, String>{'sub': subject})))
+      .replaceAll('=', '');
+  return 'eyJhbGciOiJub25lIn0.$payload.signature';
+}
+
 void main() {
+  setUpAll(() => registerFallbackValue(_DioExceptionFake()));
   tearDown(AppLogger.resetSink);
 
   test('auth interceptor injects a stored bearer token', () async {
@@ -112,6 +124,59 @@ void main() {
     expect(options.headers, isNot(contains('Authorization')));
     verify(() => handler.next(options)).called(1);
   });
+
+  test(
+    'auth interceptor preserves an owner-bound bearer token atomically',
+    () async {
+      final storage = _MockSecureStorage();
+      final interceptor = AuthHeaderInterceptor(
+        storage,
+        apiBaseUrl: 'https://example.test',
+      );
+      final token = _jwt('employee-1');
+      final options = RequestOptions(
+        path: '/items',
+        headers: <String, Object?>{'Authorization': 'Bearer $token'},
+        extra: <String, Object?>{
+          AuthenticatedRequestContext.expectedSubjectKey: 'employee-1',
+        },
+      );
+      final handler = _RequestHandler();
+
+      await interceptor.onRequest(options, handler);
+
+      expect(options.headers['Authorization'], 'Bearer $token');
+      verifyNever(storage.readAccessToken);
+      verify(() => handler.next(options)).called(1);
+    },
+  );
+
+  test(
+    'auth interceptor rejects a bearer token for a changed subject',
+    () async {
+      final storage = _MockSecureStorage();
+      final interceptor = AuthHeaderInterceptor(
+        storage,
+        apiBaseUrl: 'https://example.test',
+      );
+      final options = RequestOptions(
+        path: '/items',
+        headers: <String, Object?>{
+          'Authorization': 'Bearer ${_jwt('employee-2')}',
+        },
+        extra: <String, Object?>{
+          AuthenticatedRequestContext.expectedSubjectKey: 'employee-1',
+        },
+      );
+      final handler = _RequestHandler();
+
+      await interceptor.onRequest(options, handler);
+
+      verifyNever(storage.readAccessToken);
+      verify(() => handler.reject(any())).called(1);
+      verifyNever(() => handler.next(options));
+    },
+  );
 
   test(
     'auth interceptor never attaches credentials to auth endpoints',
@@ -156,6 +221,22 @@ void main() {
     expect(client.dio.interceptors[1], isA<AuthHeaderInterceptor>());
     expect(client.dio.interceptors[2], isA<TokenRefreshInterceptor>());
     expect(client.dio.interceptors[3], isA<CacheInterceptor>());
+  });
+
+  test('background clients can avoid cross-isolate token mutation', () {
+    final client = NetworkClient.create(
+      secureStorage: _MockSecureStorage(),
+      authEventBus: AuthEventBus(),
+      networkMonitor: _MockNetworkMonitor(),
+      cacheBox: _MockBox(),
+      includeDebugLogger: false,
+      enableTokenRefresh: false,
+    );
+
+    expect(
+      client.dio.interceptors,
+      isNot(contains(isA<TokenRefreshInterceptor>())),
+    );
   });
 
   test('infers JSON content type for map request bodies', () async {

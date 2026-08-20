@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:cedsif_overtime_mobile/core/config/providers.dart';
+import 'package:cedsif_overtime_mobile/core/auth/authenticated_subject.dart';
 import 'package:cedsif_overtime_mobile/features/auth/presentation/providers/login_provider.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/datasources/location_data_source.dart';
 import 'package:cedsif_overtime_mobile/features/overtime/data/datasources/overtime_local_datasource.dart';
@@ -28,11 +29,13 @@ final overtimeRemoteDataSourceProvider = Provider<OvertimeRemoteDataSource>(
 );
 
 final overtimePendingRequestDataSourceProvider =
-    Provider<OvertimePendingRequestDataSource>(
-      (ref) => OvertimePendingRequestDataSource(
+    Provider<OvertimePendingRequestDataSource>((ref) {
+      final secureStorage = ref.watch(secureStorageProvider);
+      return OvertimePendingRequestDataSource(
         ref.watch(pendingRequestsBoxProvider),
-      ),
-    );
+        ownerSubjectProvider: () => AuthenticatedSubject.read(secureStorage),
+      );
+    });
 
 final locationPlatformProvider = Provider<LocationPlatform>(
   (ref) => const PluginLocationPlatform(),

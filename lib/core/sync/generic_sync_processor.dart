@@ -1,13 +1,17 @@
 import 'package:dio/dio.dart';
 import 'package:hive/hive.dart';
 
+import 'package:cedsif_overtime_mobile/core/auth/authenticated_subject.dart';
 import 'package:cedsif_overtime_mobile/core/network/request_origin.dart';
 
 abstract interface class PendingRequestHandler {
   Future<PendingRequestOutcome> process(Map<String, Object?> request);
 }
 
-enum PendingRequestOutcome { success, retry, permanentRejection }
+typedef PendingRequestOwnerSubjectProvider = Future<String?> Function();
+typedef AuthenticatedTokenProvider = Future<AuthenticatedToken?> Function();
+
+enum PendingRequestOutcome { success, retry, deferred, permanentRejection }
 
 class GenericSyncProcessor {
   GenericSyncProcessor({
@@ -37,9 +41,18 @@ class GenericSyncProcessor {
 
   Future<bool> _processPendingRequests() async {
     var allSucceeded = true;
-    final requests = _pendingRequestsBox.toMap();
+    final requests = _pendingRequestsBox.toMap().entries.indexed.toList()
+      ..sort((left, right) {
+        final leftCreatedAt = _createdAt(left.$2.value, left.$1);
+        final rightCreatedAt = _createdAt(right.$2.value, right.$1);
+        final timestampOrder = leftCreatedAt.compareTo(rightCreatedAt);
+        return timestampOrder != 0
+            ? timestampOrder
+            : left.$1.compareTo(right.$1);
+      });
 
-    for (final entry in requests.entries) {
+    for (final indexedEntry in requests) {
+      final entry = indexedEntry.$2;
       final request = _toStringKeyedMap(entry.value);
       if (request == null || _isPermanentlyInvalid(request)) {
         allSucceeded = false;
@@ -60,6 +73,8 @@ class GenericSyncProcessor {
             allSucceeded = false;
             await _markForRetry(entry.key, request);
             return false;
+          case PendingRequestOutcome.deferred:
+            allSucceeded = false;
           case PendingRequestOutcome.permanentRejection:
             allSucceeded = false;
             await _pendingRequestsBox.delete(entry.key);
@@ -133,12 +148,28 @@ class GenericSyncProcessor {
     }
     return request;
   }
+
+  DateTime _createdAt(Object? value, int fallbackOrder) {
+    final request = _toStringKeyedMap(value);
+    final createdAt = request?['createdAt'];
+    if (createdAt is String) {
+      final parsed = DateTime.tryParse(createdAt);
+      if (parsed != null) {
+        return parsed.toUtc();
+      }
+    }
+    return DateTime.fromMillisecondsSinceEpoch(fallbackOrder, isUtc: true);
+  }
 }
 
 class DioPendingRequestHandler implements PendingRequestHandler {
-  const DioPendingRequestHandler(this._dio);
+  const DioPendingRequestHandler(
+    this._dio, {
+    required AuthenticatedTokenProvider authenticatedTokenProvider,
+  }) : _authenticatedTokenProvider = authenticatedTokenProvider;
 
   final Dio _dio;
+  final AuthenticatedTokenProvider _authenticatedTokenProvider;
 
   static const Set<String> _safeHeaderNames = <String>{
     'accept',
@@ -149,6 +180,14 @@ class DioPendingRequestHandler implements PendingRequestHandler {
 
   @override
   Future<PendingRequestOutcome> process(Map<String, Object?> request) async {
+    final authenticatedToken = await _authenticatedTokenProvider();
+    final requestOwner = request['ownerSubject'];
+    if (requestOwner is! String ||
+        requestOwner.isEmpty ||
+        authenticatedToken == null ||
+        authenticatedToken.subject != requestOwner) {
+      return PendingRequestOutcome.deferred;
+    }
     final method = request['method'];
     final path = request['path'];
     if (method is! String ||
@@ -158,7 +197,10 @@ class DioPendingRequestHandler implements PendingRequestHandler {
       return PendingRequestOutcome.permanentRejection;
     }
 
-    final headers = _safeHeaders(request['headers']);
+    final headers = <String, Object?>{
+      ..._safeHeaders(request['headers']),
+      'Authorization': 'Bearer ${authenticatedToken.accessToken}',
+    };
     final normalizedMethod = method.toUpperCase();
     if (!RequestOrigin.isAllowedPath(path, _dio.options.baseUrl) ||
         (!_safeMethods.contains(normalizedMethod) &&
@@ -169,7 +211,13 @@ class DioPendingRequestHandler implements PendingRequestHandler {
       final response = await _dio.request<dynamic>(
         path,
         data: request['body'],
-        options: Options(method: normalizedMethod, headers: headers),
+        options: Options(
+          method: normalizedMethod,
+          headers: headers,
+          extra: <String, Object?>{
+            AuthenticatedRequestContext.expectedSubjectKey: requestOwner,
+          },
+        ),
       );
       final statusCode = response.statusCode;
       return statusCode != null && statusCode >= 200 && statusCode < 300

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -5,6 +6,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:cedsif_overtime_mobile/core/auth/authenticated_subject.dart';
+import 'package:cedsif_overtime_mobile/core/auth/session_mutation_coordinator.dart';
 import 'package:cedsif_overtime_mobile/core/constants/api_endpoints.dart';
 import 'package:cedsif_overtime_mobile/core/network/auth_event_bus.dart';
 import 'package:cedsif_overtime_mobile/core/network/token_refresh_interceptor.dart';
@@ -36,6 +39,13 @@ ResponseBody _jsonResponse(int status, Map<String, Object?> body) =>
         Headers.contentTypeHeader: <String>[Headers.jsonContentType],
       },
     );
+
+String _jwt(String subject) {
+  final payload = base64Url
+      .encode(utf8.encode(jsonEncode(<String, String>{'sub': subject})))
+      .replaceAll('=', '');
+  return 'eyJhbGciOiJub25lIn0.$payload.signature';
+}
 
 void main() {
   late _MockSecureStorage storage;
@@ -143,6 +153,170 @@ void main() {
 
     expect(refreshCalls, 1);
   });
+
+  test(
+    'does not retry an owner-bound request with another subject token',
+    () async {
+      var protectedCalls = 0;
+      final requestDio = Dio(BaseOptions(baseUrl: 'https://example.test'));
+      final refreshDio = Dio(BaseOptions(baseUrl: 'https://example.test'));
+      requestDio.httpClientAdapter = _QueueAdapter((_) async {
+        protectedCalls += 1;
+        return _jsonResponse(401, <String, Object?>{'error': 'expired'});
+      });
+      refreshDio.httpClientAdapter = _QueueAdapter((_) async {
+        return _jsonResponse(200, <String, Object?>{
+          'accessToken': _jwt('employee-2'),
+          'refreshToken': 'employee-2-refresh',
+        });
+      });
+      when(storage.readRefreshToken).thenAnswer((_) async => 'refresh-token');
+      when(
+        () => storage.writeTokens(
+          accessToken: any(named: 'accessToken'),
+          refreshToken: 'employee-2-refresh',
+        ),
+      ).thenAnswer((_) async {});
+      when(storage.readAccessToken).thenAnswer((_) async => _jwt('employee-2'));
+      requestDio.interceptors.add(
+        TokenRefreshInterceptor(
+          dio: requestDio,
+          refreshDio: refreshDio,
+          secureStorage: storage,
+          authEventBus: eventBus,
+        ),
+      );
+
+      await expectLater(
+        requestDio.get<dynamic>(
+          '/protected',
+          options: Options(
+            headers: <String, Object?>{
+              'Authorization': 'Bearer ${_jwt('employee-1')}',
+            },
+            extra: <String, Object?>{
+              AuthenticatedRequestContext.expectedSubjectKey: 'employee-1',
+            },
+          ),
+        ),
+        throwsA(isA<DioException>()),
+      );
+
+      expect(protectedCalls, 1);
+    },
+  );
+
+  test('in-flight refresh cannot overwrite a replacement login', () async {
+    final refreshStarted = Completer<void>();
+    final releaseRefresh = Completer<void>();
+    final requestDio = Dio(BaseOptions(baseUrl: 'https://example.test'));
+    final refreshDio = Dio(BaseOptions(baseUrl: 'https://example.test'));
+    requestDio.httpClientAdapter = _QueueAdapter(
+      (_) async => _jsonResponse(401, <String, Object?>{'error': 'expired'}),
+    );
+    refreshDio.httpClientAdapter = _QueueAdapter((_) async {
+      refreshStarted.complete();
+      await releaseRefresh.future;
+      return _jsonResponse(200, <String, Object?>{
+        'accessToken': 'employee-1-access',
+        'refreshToken': 'employee-1-replacement',
+      });
+    });
+    var refreshTokenReads = 0;
+    when(storage.readRefreshToken).thenAnswer((_) async {
+      refreshTokenReads += 1;
+      return refreshTokenReads == 1
+          ? 'employee-1-refresh'
+          : 'employee-2-refresh';
+    });
+    requestDio.interceptors.add(
+      TokenRefreshInterceptor(
+        dio: requestDio,
+        refreshDio: refreshDio,
+        secureStorage: storage,
+        authEventBus: eventBus,
+      ),
+    );
+
+    final request = requestDio.get<dynamic>('/protected');
+    await refreshStarted.future;
+    releaseRefresh.complete();
+
+    await expectLater(request, throwsA(isA<DioException>()));
+    verifyNever(
+      () => storage.writeTokens(
+        accessToken: any(named: 'accessToken'),
+        refreshToken: any(named: 'refreshToken'),
+      ),
+    );
+    verifyNever(storage.clearTokens);
+  });
+
+  test(
+    'login replacement waits for and supersedes an active refresh',
+    () async {
+      final coordinator = SessionMutationCoordinator();
+      final refreshStarted = Completer<void>();
+      final releaseRefresh = Completer<void>();
+      var currentAccessToken = 'employee-1-access';
+      var currentRefreshToken = 'employee-1-refresh';
+      var protectedCalls = 0;
+      final requestDio = Dio(BaseOptions(baseUrl: 'https://example.test'));
+      final refreshDio = Dio(BaseOptions(baseUrl: 'https://example.test'));
+      requestDio.httpClientAdapter = _QueueAdapter((_) async {
+        protectedCalls += 1;
+        return _jsonResponse(protectedCalls == 1 ? 401 : 200, <String, Object?>{
+          'ok': protectedCalls > 1,
+        });
+      });
+      refreshDio.httpClientAdapter = _QueueAdapter((_) async {
+        refreshStarted.complete();
+        await releaseRefresh.future;
+        return _jsonResponse(200, <String, Object?>{
+          'accessToken': 'employee-1-refreshed',
+          'refreshToken': 'employee-1-replacement',
+        });
+      });
+      when(
+        storage.readRefreshToken,
+      ).thenAnswer((_) async => currentRefreshToken);
+      when(storage.readAccessToken).thenAnswer((_) async => currentAccessToken);
+      when(
+        () => storage.writeTokens(
+          accessToken: any(named: 'accessToken'),
+          refreshToken: any(named: 'refreshToken'),
+        ),
+      ).thenAnswer((invocation) async {
+        currentAccessToken = invocation.namedArguments[#accessToken]! as String;
+        currentRefreshToken =
+            invocation.namedArguments[#refreshToken]! as String;
+      });
+      requestDio.interceptors.add(
+        TokenRefreshInterceptor(
+          dio: requestDio,
+          refreshDio: refreshDio,
+          secureStorage: storage,
+          authEventBus: eventBus,
+          sessionMutationCoordinator: coordinator,
+        ),
+      );
+
+      final request = requestDio.get<dynamic>('/protected');
+      await refreshStarted.future;
+      final replacementLogin = coordinator.run(
+        () => storage.writeTokens(
+          accessToken: 'employee-2-access',
+          refreshToken: 'employee-2-refresh',
+        ),
+      );
+      releaseRefresh.complete();
+      await request;
+      await replacementLogin;
+
+      expect(currentAccessToken, 'employee-2-access');
+      expect(currentRefreshToken, 'employee-2-refresh');
+    },
+  );
 
   test('failed refresh clears tokens and emits session expiry', () async {
     final requestDio = Dio(BaseOptions(baseUrl: 'https://example.test'));

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cedsif_overtime_mobile/app.dart';
+import 'package:cedsif_overtime_mobile/core/auth/authenticated_subject.dart';
 import 'package:cedsif_overtime_mobile/core/config/providers.dart';
 import 'package:cedsif_overtime_mobile/core/constants/app_colors.dart';
 import 'package:cedsif_overtime_mobile/core/database/app_database.dart';
@@ -111,10 +112,14 @@ Future<void> initializeApplication() async {
     );
   };
 
-  final database = await runNonCriticalStep<AppDatabase>(
-    'database',
-    AppDatabase.initialize,
+  const secureStorage = SecureStorage();
+  final legacyOwnerSubject = await runNonCriticalStep<String?>(
+    'legacy_queue_owner',
+    () => AuthenticatedSubject.read(secureStorage),
   );
+  final database = await runNonCriticalStep<AppDatabase>('database', () {
+    return AppDatabase.initialize(legacyOwnerSubject: legacyOwnerSubject);
+  });
   final preferences = await runNonCriticalStep<SharedPreferences>(
     'shared_preferences',
     SharedPreferences.getInstance,
@@ -124,7 +129,6 @@ Future<void> initializeApplication() async {
     runApp(buildBootstrapFallbackRoot());
     return;
   }
-  final secureStorage = const SecureStorage();
   final authEventBus = AuthEventBus();
   final networkMonitor = NetworkMonitor();
   final initiallyOnline =

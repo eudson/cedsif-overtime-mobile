@@ -1,16 +1,23 @@
 import 'package:cedsif_overtime_mobile/core/storage/secure_storage.dart';
+import 'package:cedsif_overtime_mobile/core/auth/session_mutation_coordinator.dart';
 import 'package:cedsif_overtime_mobile/core/utils/jwt_decoder.dart';
 
 typedef SessionClock = DateTime Function();
 
 class AuthSessionService {
-  AuthSessionService(this._secureStorage, {SessionClock? now})
-    : _now = now ?? DateTime.now;
+  AuthSessionService(
+    this._secureStorage, {
+    SessionClock? now,
+    SessionMutationCoordinator? sessionMutationCoordinator,
+  }) : _now = now ?? DateTime.now,
+       _sessionMutationCoordinator =
+           sessionMutationCoordinator ?? SessionMutationCoordinator.shared;
 
   final SecureStorage _secureStorage;
   final SessionClock _now;
+  final SessionMutationCoordinator _sessionMutationCoordinator;
 
-  Future<DateTime?> validUntil() async {
+  Future<DateTime?> validUntil() => _sessionMutationCoordinator.run(() async {
     final String? accessToken;
     try {
       accessToken = await _secureStorage.readAccessToken();
@@ -24,7 +31,7 @@ class AuthSessionService {
     }
     await _clearExpiredSession();
     return null;
-  }
+  });
 
   Future<bool> hasValidSession() async => await validUntil() != null;
 

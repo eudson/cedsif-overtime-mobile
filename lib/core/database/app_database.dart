@@ -1,5 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
+import 'package:cedsif_overtime_mobile/core/sync/pending_request_timestamp_migration.dart';
+
 typedef HiveInitializer = Future<void> Function(HiveInterface hive);
 
 class AppDatabase {
@@ -21,6 +23,7 @@ class AppDatabase {
   static Future<AppDatabase> initialize({
     HiveInterface? hive,
     HiveInitializer? hiveInitializer,
+    String? legacyOwnerSubject,
   }) async {
     final hiveInstance = hive ?? Hive;
     await (hiveInitializer ?? _initializeHive)(hiveInstance);
@@ -29,6 +32,9 @@ class AppDatabase {
       pendingRequestsBoxName,
     );
     final overtimeBox = await hiveInstance.openBox<dynamic>(overtimeBoxName);
+    await PendingRequestTimestampMigration(
+      pendingRequestsBox,
+    ).migrate(legacyOwnerSubject: legacyOwnerSubject);
     return AppDatabase._(
       cacheBox: cacheBox,
       pendingRequestsBox: pendingRequestsBox,

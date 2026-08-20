@@ -7,6 +7,8 @@ import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cedsif_overtime_mobile/core/error/failures.dart';
+import 'package:cedsif_overtime_mobile/core/config/providers.dart';
+import 'package:cedsif_overtime_mobile/core/sync/foreground_sync_coordinator.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/login_usecase.dart';
 import 'package:cedsif_overtime_mobile/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:cedsif_overtime_mobile/features/auth/data/services/session_data_cleaner.dart';
@@ -18,14 +20,22 @@ class _MockLogoutUseCase extends Mock implements LogoutUseCase {}
 
 class _MockSessionDataCleaner extends Mock implements SessionDataCleaner {}
 
+class _MockForegroundSyncCoordinator extends Mock
+    implements ForegroundSyncCoordinator {}
+
 void main() {
   late _MockLoginUseCase useCase;
+  late _MockForegroundSyncCoordinator syncCoordinator;
   late ProviderContainer container;
 
   setUp(() {
     useCase = _MockLoginUseCase();
+    syncCoordinator = _MockForegroundSyncCoordinator();
     container = ProviderContainer(
-      overrides: <Override>[loginUseCaseProvider.overrideWithValue(useCase)],
+      overrides: <Override>[
+        loginUseCaseProvider.overrideWithValue(useCase),
+        foregroundSyncCoordinatorProvider.overrideWithValue(syncCoordinator),
+      ],
     );
   });
 
@@ -54,6 +64,7 @@ void main() {
     expect(await operation, isTrue);
     expect(container.read(loginNotifierProvider).isLoading, isFalse);
     expect(container.read(loginNotifierProvider).errorKey, isNull);
+    verify(syncCoordinator.requestSync).called(1);
   });
 
   test('returns false and exposes a typed failure translation key', () async {

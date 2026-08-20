@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:cedsif_overtime_mobile/core/auth/authenticated_subject.dart';
 import 'package:cedsif_overtime_mobile/core/sync/generic_sync_processor.dart';
 
 class _MockBox extends Mock implements Box<dynamic> {}
@@ -147,6 +148,50 @@ void main() {
     verifyNever(() => handler.process(second));
   });
 
+  test('processes queued requests by createdAt instead of box order', () async {
+    const start = <String, Object?>{
+      'method': 'POST',
+      'path': '/start',
+      'headers': <String, Object?>{'Idempotency-Key': 'start'},
+      'createdAt': '2026-08-20T17:37:49Z',
+    };
+    const end = <String, Object?>{
+      'method': 'POST',
+      'path': '/end',
+      'headers': <String, Object?>{'Idempotency-Key': 'end'},
+      'createdAt': '2026-08-20T17:40:20Z',
+    };
+    const submit = <String, Object?>{
+      'method': 'POST',
+      'path': '/submit',
+      'headers': <String, Object?>{'Idempotency-Key': 'submit'},
+      'createdAt': '2026-08-20T17:40:21Z',
+    };
+    when(() => queue.toMap()).thenReturn(<dynamic, dynamic>{
+      'submit': submit,
+      'start': start,
+      'end': end,
+    });
+    for (final request in <Map<String, Object?>>[start, end, submit]) {
+      when(
+        () => handler.process(request),
+      ).thenAnswer((_) async => PendingRequestOutcome.success);
+    }
+    when(() => queue.delete(any<dynamic>())).thenAnswer((_) async {});
+
+    final result = await GenericSyncProcessor(
+      pendingRequestsBox: queue,
+      handler: handler,
+    ).processPendingRequests();
+
+    expect(result, isTrue);
+    verifyInOrder(<void Function()>[
+      () => handler.process(start),
+      () => handler.process(end),
+      () => handler.process(submit),
+    ]);
+  });
+
   test(
     'retains requests and reports failure when the handler throws',
     () async {
@@ -204,7 +249,13 @@ void main() {
     final adapter = _RecordingAdapter(204);
     final dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
       ..httpClientAdapter = adapter;
-    final handler = DioPendingRequestHandler(dio);
+    final handler = DioPendingRequestHandler(
+      dio,
+      authenticatedTokenProvider: () async => const AuthenticatedToken(
+        accessToken: 'fresh-token',
+        subject: 'employee-1',
+      ),
+    );
 
     final result = await handler.process(<String, Object?>{
       'method': 'PATCH',
@@ -216,12 +267,13 @@ void main() {
         'Idempotency-Key': 'stable-request-key',
       },
       'body': <String, Object?>{'value': 1},
+      'ownerSubject': 'employee-1',
     });
 
     expect(result, PendingRequestOutcome.success);
     expect(adapter.request?.method, 'PATCH');
     expect(adapter.request?.path, '/generic-resource');
-    expect(adapter.request?.headers['Authorization'], isNull);
+    expect(adapter.request?.headers['Authorization'], 'Bearer fresh-token');
     expect(adapter.request?.headers['Cookie'], isNull);
     expect(adapter.request?.headers['Content-Type'], 'application/json');
     expect(adapter.request?.headers['Idempotency-Key'], 'stable-request-key');
@@ -232,12 +284,18 @@ void main() {
     final dio = Dio(BaseOptions(baseUrl: 'https://api.example.test'))
       ..httpClientAdapter = adapter;
 
-    final result = await DioPendingRequestHandler(dio).process(
-      <String, Object?>{
-        'method': 'GET',
-        'path': 'https://attacker.example/items',
-      },
-    );
+    final result =
+        await DioPendingRequestHandler(
+          dio,
+          authenticatedTokenProvider: () async => const AuthenticatedToken(
+            accessToken: 'fresh-token',
+            subject: 'employee-1',
+          ),
+        ).process(<String, Object?>{
+          'method': 'GET',
+          'path': 'https://attacker.example/items',
+          'ownerSubject': 'employee-1',
+        });
 
     expect(result, PendingRequestOutcome.permanentRejection);
     expect(adapter.request, isNull);
@@ -248,9 +306,18 @@ void main() {
     final dio = Dio(BaseOptions(baseUrl: 'https://api.example.test'))
       ..httpClientAdapter = adapter;
 
-    final result = await DioPendingRequestHandler(
-      dio,
-    ).process(<String, Object?>{'method': 'POST', 'path': '/items'});
+    final result =
+        await DioPendingRequestHandler(
+          dio,
+          authenticatedTokenProvider: () async => const AuthenticatedToken(
+            accessToken: 'fresh-token',
+            subject: 'employee-1',
+          ),
+        ).process(<String, Object?>{
+          'method': 'POST',
+          'path': '/items',
+          'ownerSubject': 'employee-1',
+        });
 
     expect(result, PendingRequestOutcome.permanentRejection);
     expect(adapter.request, isNull);
@@ -318,17 +385,27 @@ void main() {
     () async {
       final dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
         ..httpClientAdapter = _RecordingAdapter(500);
-      final handler = DioPendingRequestHandler(dio);
+      final handler = DioPendingRequestHandler(
+        dio,
+        authenticatedTokenProvider: () async => const AuthenticatedToken(
+          accessToken: 'fresh-token',
+          subject: 'employee-1',
+        ),
+      );
 
       expect(
         await handler.process(<String, Object?>{
           'method': 'POST',
           'path': '/generic-resource',
+          'ownerSubject': 'employee-1',
         }),
         PendingRequestOutcome.permanentRejection,
       );
       expect(
-        await handler.process(<String, Object?>{'method': 'POST'}),
+        await handler.process(<String, Object?>{
+          'method': 'POST',
+          'ownerSubject': 'employee-1',
+        }),
         PendingRequestOutcome.permanentRejection,
       );
     },
@@ -339,15 +416,44 @@ void main() {
     final dio = Dio(BaseOptions(baseUrl: 'https://api.example.test'))
       ..httpClientAdapter = adapter;
 
-    final result = await DioPendingRequestHandler(dio).process(
-      <String, Object?>{
-        'method': 'POST',
-        'path': '/items',
-        'headers': <String, Object?>{'Idempotency-Key': '   '},
-      },
-    );
+    final result =
+        await DioPendingRequestHandler(
+          dio,
+          authenticatedTokenProvider: () async => const AuthenticatedToken(
+            accessToken: 'fresh-token',
+            subject: 'employee-1',
+          ),
+        ).process(<String, Object?>{
+          'method': 'POST',
+          'path': '/items',
+          'headers': <String, Object?>{'Idempotency-Key': '   '},
+          'ownerSubject': 'employee-1',
+        });
 
     expect(result, PendingRequestOutcome.permanentRejection);
+    expect(adapter.request, isNull);
+  });
+
+  test('Dio handler retains requests owned by another employee', () async {
+    final adapter = _RecordingAdapter(200);
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.test'))
+      ..httpClientAdapter = adapter;
+
+    final result =
+        await DioPendingRequestHandler(
+          dio,
+          authenticatedTokenProvider: () async => const AuthenticatedToken(
+            accessToken: 'employee-2-token',
+            subject: 'employee-2',
+          ),
+        ).process(<String, Object?>{
+          'method': 'POST',
+          'path': '/items',
+          'headers': <String, Object?>{'Idempotency-Key': 'request-1'},
+          'ownerSubject': 'employee-1',
+        });
+
+    expect(result, PendingRequestOutcome.deferred);
     expect(adapter.request, isNull);
   });
 
@@ -368,6 +474,37 @@ void main() {
 
     expect(result, isFalse);
     verify(() => queue.delete('request-1')).called(1);
+    verifyNever(() => queue.put(any<dynamic>(), any<dynamic>()));
+  });
+
+  test('deferred request does not block a later owned request', () async {
+    const deferredRequest = <String, Object?>{
+      'method': 'GET',
+      'path': '/first',
+    };
+    const ownedRequest = <String, Object?>{'method': 'GET', 'path': '/second'};
+    when(() => queue.toMap()).thenReturn(<dynamic, dynamic>{
+      'request-1': deferredRequest,
+      'request-2': ownedRequest,
+    });
+    when(
+      () => handler.process(deferredRequest),
+    ).thenAnswer((_) async => PendingRequestOutcome.deferred);
+    when(
+      () => handler.process(ownedRequest),
+    ).thenAnswer((_) async => PendingRequestOutcome.success);
+    when(() => queue.delete('request-2')).thenAnswer((_) async {});
+
+    final result = await GenericSyncProcessor(
+      pendingRequestsBox: queue,
+      handler: handler,
+    ).processPendingRequests();
+
+    expect(result, isFalse);
+    verify(() => handler.process(deferredRequest)).called(1);
+    verify(() => handler.process(ownedRequest)).called(1);
+    verifyNever(() => queue.delete('request-1'));
+    verify(() => queue.delete('request-2')).called(1);
     verifyNever(() => queue.put(any<dynamic>(), any<dynamic>()));
   });
 }

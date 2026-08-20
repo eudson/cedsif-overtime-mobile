@@ -1,6 +1,7 @@
 import 'package:workmanager/workmanager.dart';
 
 import 'package:cedsif_overtime_mobile/core/database/app_database.dart';
+import 'package:cedsif_overtime_mobile/core/auth/authenticated_subject.dart';
 import 'package:cedsif_overtime_mobile/core/network/auth_event_bus.dart';
 import 'package:cedsif_overtime_mobile/core/network/network_client.dart';
 import 'package:cedsif_overtime_mobile/core/network/network_monitor.dart';
@@ -27,19 +28,28 @@ Future<bool> executeBackgroundTask(
 }
 
 Future<bool> processGenericBackgroundQueue() async {
-  final database = await AppDatabase.initialize();
+  const secureStorage = SecureStorage();
+  final legacyOwnerSubject = await AuthenticatedSubject.read(secureStorage);
+  final database = await AppDatabase.initialize(
+    legacyOwnerSubject: legacyOwnerSubject,
+  );
   final authEventBus = AuthEventBus();
   NetworkClient? networkClient;
   try {
     networkClient = NetworkClient.create(
-      secureStorage: const SecureStorage(),
+      secureStorage: secureStorage,
       authEventBus: authEventBus,
       networkMonitor: NetworkMonitor(),
       cacheBox: database.cacheBox,
+      enableTokenRefresh: false,
     );
     return GenericSyncProcessor(
       pendingRequestsBox: database.pendingRequestsBox,
-      handler: DioPendingRequestHandler(networkClient.dio),
+      handler: DioPendingRequestHandler(
+        networkClient.dio,
+        authenticatedTokenProvider: () =>
+            AuthenticatedToken.read(secureStorage),
+      ),
     ).processPendingRequests();
   } finally {
     networkClient?.close(force: true);

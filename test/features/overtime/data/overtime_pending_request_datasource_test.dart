@@ -14,7 +14,11 @@ void main() {
 
   setUp(() {
     box = _MockBox();
-    dataSource = OvertimePendingRequestDataSource(box, clock: () => createdAt);
+    dataSource = OvertimePendingRequestDataSource(
+      box,
+      ownerSubjectProvider: () async => 'employee-1',
+      clock: () => createdAt,
+    );
     when(() => box.containsKey(any<dynamic>())).thenReturn(false);
     when(
       () => box.put(any<dynamic>(), any<dynamic>()),
@@ -22,7 +26,7 @@ void main() {
   });
 
   test('queues start with the exact API contract', () async {
-    final startedAt = DateTime.utc(2026, 8, 20, 9, 15);
+    final startedAt = DateTime(2026, 8, 20, 9, 15);
 
     await dataSource.enqueueStart(
       timeEntryId: 'entry-1',
@@ -46,16 +50,17 @@ void main() {
           'latitude': -25.9692,
           'longitude': 32.5732,
           'biometricReference': 'face-1',
-          'startedAt': startedAt.toIso8601String(),
+          'startedAt': startedAt.toUtc().toIso8601String(),
         },
         'createdAt': createdAt.toIso8601String(),
         'retryCount': 0,
+        'ownerSubject': 'employee-1',
       }),
     ).called(1);
   });
 
   test('queues end followed by daily submission contracts', () async {
-    final endedAt = DateTime.utc(2026, 8, 20, 11, 45);
+    final endedAt = DateTime(2026, 8, 20, 11, 45);
 
     await dataSource.enqueueEnd(
       timeEntryId: 'entry-1',
@@ -72,6 +77,11 @@ void main() {
       () => box.put('submit-1', captureAny<dynamic>()),
     ]);
     final submit = writes[1].captured.single as Map<dynamic, dynamic>;
+    final end = writes[0].captured.single as Map<dynamic, dynamic>;
+    expect(
+      (end['body'] as Map<dynamic, dynamic>)['endedAt'],
+      endedAt.toUtc().toIso8601String(),
+    );
     expect(submit['path'], ApiEndpoints.overtimeSubmit);
     expect(submit['body'], <String, Object?>{'workDate': '2026-08-20'});
   });
@@ -86,6 +96,28 @@ void main() {
       biometricReference: 'face-1',
       startedAt: createdAt,
       idempotencyKey: 'start-1',
+    );
+
+    verifyNever(() => box.put(any<dynamic>(), any<dynamic>()));
+  });
+
+  test('does not queue work without an authenticated owner', () async {
+    final unownedDataSource = OvertimePendingRequestDataSource(
+      box,
+      ownerSubjectProvider: () async => null,
+      clock: () => createdAt,
+    );
+
+    await expectLater(
+      unownedDataSource.enqueueStart(
+        timeEntryId: 'entry-1',
+        latitude: 0,
+        longitude: 0,
+        biometricReference: 'face-1',
+        startedAt: createdAt,
+        idempotencyKey: 'start-1',
+      ),
+      throwsStateError,
     );
 
     verifyNever(() => box.put(any<dynamic>(), any<dynamic>()));

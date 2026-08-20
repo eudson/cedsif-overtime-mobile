@@ -65,4 +65,35 @@ void main() {
     await pumpEventQueue();
     expect(calls, 2);
   });
+
+  test('runs a requested follow-up pass after an active pass', () async {
+    final connectivity = StreamController<bool>();
+    final engine = SyncEngine(
+      connectivityChanges: connectivity.stream,
+      initiallyOnline: true,
+    );
+    final firstPass = Completer<bool>();
+    var calls = 0;
+    final coordinator = ForegroundSyncCoordinator(
+      syncEngine: engine,
+      processPendingRequests: () {
+        calls += 1;
+        return calls == 1 ? firstPass.future : Future<bool>.value(true);
+      },
+    );
+    addTearDown(() async {
+      await coordinator.dispose();
+      await engine.dispose();
+      await connectivity.close();
+    });
+
+    await pumpEventQueue();
+    coordinator.requestSync();
+    await pumpEventQueue();
+    expect(calls, 1);
+    firstPass.complete(false);
+    await pumpEventQueue();
+
+    expect(calls, 2);
+  });
 }

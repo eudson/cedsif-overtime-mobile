@@ -8,6 +8,7 @@ import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cedsif_overtime_mobile/core/database/app_database.dart';
+import 'package:cedsif_overtime_mobile/core/auth/authenticated_subject.dart';
 import 'package:cedsif_overtime_mobile/core/network/auth_event_bus.dart';
 import 'package:cedsif_overtime_mobile/core/network/network_client.dart';
 import 'package:cedsif_overtime_mobile/core/network/network_monitor.dart';
@@ -70,12 +71,16 @@ final dioProvider = Provider<Dio>(
   (ref) => ref.watch(networkClientProvider).dio,
 );
 
-final genericSyncProcessorProvider = Provider<GenericSyncProcessor>(
-  (ref) => GenericSyncProcessor(
+final genericSyncProcessorProvider = Provider<GenericSyncProcessor>((ref) {
+  final secureStorage = ref.watch(secureStorageProvider);
+  return GenericSyncProcessor(
     pendingRequestsBox: ref.watch(pendingRequestsBoxProvider),
-    handler: DioPendingRequestHandler(ref.watch(dioProvider)),
-  ),
-);
+    handler: DioPendingRequestHandler(
+      ref.watch(dioProvider),
+      authenticatedTokenProvider: () => AuthenticatedToken.read(secureStorage),
+    ),
+  );
+});
 
 final foregroundSyncCoordinatorProvider = Provider<ForegroundSyncCoordinator>((
   ref,

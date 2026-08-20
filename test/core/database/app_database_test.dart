@@ -24,6 +24,7 @@ void main() {
     when(
       () => hive.openBox<dynamic>(AppDatabase.overtimeBoxName),
     ).thenAnswer((_) async => overtimeBox);
+    when(pendingRequestsBox.toMap).thenReturn(<dynamic, dynamic>{});
 
     final database = await AppDatabase.initialize(
       hive: hive,
@@ -52,6 +53,7 @@ void main() {
     when(
       () => hive.openBox<dynamic>(AppDatabase.overtimeBoxName),
     ).thenAnswer((_) async => overtimeBox);
+    when(pendingRequestsBox.toMap).thenReturn(<dynamic, dynamic>{});
     when(() => cacheBox.isOpen).thenReturn(true);
     when(() => pendingRequestsBox.isOpen).thenReturn(true);
     when(() => overtimeBox.isOpen).thenReturn(true);

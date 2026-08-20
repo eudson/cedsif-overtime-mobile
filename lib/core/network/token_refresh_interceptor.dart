@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 
+import 'package:cedsif_overtime_mobile/core/auth/authenticated_subject.dart';
+import 'package:cedsif_overtime_mobile/core/auth/session_mutation_coordinator.dart';
 import 'package:cedsif_overtime_mobile/core/constants/api_endpoints.dart';
 import 'package:cedsif_overtime_mobile/core/network/auth_event_bus.dart';
 import 'package:cedsif_overtime_mobile/core/network/request_origin.dart';
@@ -13,12 +15,15 @@ class TokenRefreshInterceptor extends Interceptor {
     required Dio refreshDio,
     required SecureStorage secureStorage,
     required AuthEventBus authEventBus,
+    SessionMutationCoordinator? sessionMutationCoordinator,
     String? apiBaseUrl,
     Future<void> Function()? onSessionExpired,
   }) : _dio = dio,
        _refreshDio = refreshDio,
        _secureStorage = secureStorage,
        _authEventBus = authEventBus,
+       _sessionMutationCoordinator =
+           sessionMutationCoordinator ?? SessionMutationCoordinator.shared,
        _apiBaseUrl = apiBaseUrl ?? dio.options.baseUrl,
        _onSessionExpired = onSessionExpired;
 
@@ -28,6 +33,7 @@ class TokenRefreshInterceptor extends Interceptor {
   final Dio _refreshDio;
   final SecureStorage _secureStorage;
   final AuthEventBus _authEventBus;
+  final SessionMutationCoordinator _sessionMutationCoordinator;
   final String _apiBaseUrl;
   final Future<void> Function()? _onSessionExpired;
   Future<bool>? _activeRefresh;
@@ -54,6 +60,16 @@ class TokenRefreshInterceptor extends Interceptor {
 
     try {
       final accessToken = await _secureStorage.readAccessToken();
+      final expectedSubject =
+          request.extra[AuthenticatedRequestContext.expectedSubjectKey];
+      if (expectedSubject is String &&
+          AuthenticatedRequestContext.subjectFromBearerHeader(
+                accessToken == null ? null : 'Bearer $accessToken',
+              ) !=
+              expectedSubject) {
+        handler.next(err);
+        return;
+      }
       final retryOptions = request.copyWith(
         headers: <String, dynamic>{
           ...request.headers,
@@ -80,7 +96,7 @@ class TokenRefreshInterceptor extends Interceptor {
       return active;
     }
 
-    final operation = _refreshTokens();
+    final operation = _sessionMutationCoordinator.run(_refreshTokens);
     _activeRefresh = operation;
     operation.whenComplete(() {
       if (identical(_activeRefresh, operation)) {
@@ -91,18 +107,19 @@ class TokenRefreshInterceptor extends Interceptor {
   }
 
   Future<bool> _refreshTokens() async {
+    String? initiatingRefreshToken;
     try {
-      final refreshToken = await _secureStorage.readRefreshToken();
-      if (refreshToken == null || refreshToken.isEmpty) {
-        return _expireSession();
+      initiatingRefreshToken = await _secureStorage.readRefreshToken();
+      if (initiatingRefreshToken == null || initiatingRefreshToken.isEmpty) {
+        return _expireSessionIfCurrent(initiatingRefreshToken);
       }
       final response = await _refreshDio.post<dynamic>(
         ApiEndpoints.refreshToken,
-        data: <String, Object?>{'refreshToken': refreshToken},
+        data: <String, Object?>{'refreshToken': initiatingRefreshToken},
       );
       final data = response.data;
       if (data is! Map<Object?, Object?>) {
-        return _expireSession();
+        return _expireSessionIfCurrent(initiatingRefreshToken);
       }
       final accessToken = data['accessToken'];
       final replacementRefreshToken = data['refreshToken'];
@@ -110,7 +127,11 @@ class TokenRefreshInterceptor extends Interceptor {
           accessToken.isEmpty ||
           replacementRefreshToken is! String ||
           replacementRefreshToken.isEmpty) {
-        return _expireSession();
+        return _expireSessionIfCurrent(initiatingRefreshToken);
+      }
+      final currentRefreshToken = await _secureStorage.readRefreshToken();
+      if (currentRefreshToken != initiatingRefreshToken) {
+        return false;
       }
       await _secureStorage.writeTokens(
         accessToken: accessToken,
@@ -118,8 +139,20 @@ class TokenRefreshInterceptor extends Interceptor {
       );
       return true;
     } on Object {
-      return _expireSession();
+      return _expireSessionIfCurrent(initiatingRefreshToken);
     }
+  }
+
+  Future<bool> _expireSessionIfCurrent(String? initiatingRefreshToken) async {
+    try {
+      final currentRefreshToken = await _secureStorage.readRefreshToken();
+      if (currentRefreshToken != initiatingRefreshToken) {
+        return false;
+      }
+    } on Object {
+      return false;
+    }
+    return _expireSession();
   }
 
   Future<bool> _expireSession() async {

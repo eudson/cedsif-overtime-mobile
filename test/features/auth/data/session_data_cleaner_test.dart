@@ -7,7 +7,7 @@ import 'package:cedsif_overtime_mobile/features/auth/data/services/session_data_
 class _MockBox extends Mock implements Box<dynamic> {}
 
 void main() {
-  test('clears cache, queued requests, and overtime records', () async {
+  test('clears session data without deleting queued requests', () async {
     final cache = _MockBox();
     final pending = _MockBox();
     final overtime = _MockBox();
@@ -17,12 +17,11 @@ void main() {
 
     await LocalSessionDataCleaner(
       cacheBox: cache,
-      pendingRequestsBox: pending,
       overtimeBox: overtime,
     ).clear();
 
     verify(cache.clear).called(1);
-    verify(pending.clear).called(1);
+    verifyNever(pending.clear);
     verify(overtime.clear).called(1);
   });
 }

@@ -56,7 +56,6 @@ final authSessionServiceProvider = Provider<AuthSessionService>(
 final sessionDataCleanerProvider = Provider<SessionDataCleaner>(
   (ref) => LocalSessionDataCleaner(
     cacheBox: ref.watch(cacheBoxProvider),
-    pendingRequestsBox: ref.watch(pendingRequestsBoxProvider),
     overtimeBox: ref.watch(overtimeBoxProvider),
   ),
 );
@@ -81,6 +80,7 @@ class LoginNotifier extends Notifier<LoginState> {
       },
       (_) {
         state = const LoginState();
+        ref.read(foregroundSyncCoordinatorProvider).requestSync();
         return true;
       },
     );

@@ -36,7 +36,7 @@ void main() {
   const entryId = '6b7d9ca6-b437-41e8-8be4-521792aec978';
   const workUnitId = '07cde809-5634-45cc-8653-34f76ba54dc8';
   const idempotencyKey = '2d06bc79-6d8e-4ddf-a75b-e0b1432e038d';
-  final startedAt = DateTime.parse('2026-08-20T16:00:00+02:00');
+  final startedAt = DateTime(2026, 8, 20, 16);
 
   test(
     'starts overtime with the client entry id and idempotency key',
@@ -71,7 +71,7 @@ void main() {
         'latitude': -25.9681,
         'longitude': 32.5732,
         'biometricReference': 'SIMULATED-entry-1',
-        'startedAt': startedAt.toIso8601String(),
+        'startedAt': startedAt.toUtc().toIso8601String(),
       });
       expect(entry.id, entryId);
       expect(entry.status, 'IN_PROGRESS');
@@ -80,7 +80,7 @@ void main() {
   );
 
   test('ends overtime with the entry id and idempotency key', () async {
-    final endedAt = DateTime.parse('2026-08-20T18:00:00+02:00');
+    final endedAt = DateTime(2026, 8, 20, 18);
     final adapter = _RecordingAdapter()
       ..responseBody = <String, Object?>{
         'id': entryId,
@@ -105,7 +105,7 @@ void main() {
     expect(adapter.request?.headers['Idempotency-Key'], idempotencyKey);
     expect(adapter.request?.data, <String, Object?>{
       'timeEntryId': entryId,
-      'endedAt': endedAt.toIso8601String(),
+      'endedAt': endedAt.toUtc().toIso8601String(),
     });
     expect(entry.durationSeconds, 7200);
     expect(entry.status, 'CLOSED');
