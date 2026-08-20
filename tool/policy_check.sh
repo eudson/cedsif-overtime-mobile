@@ -14,9 +14,13 @@ require_no_matches() {
   fi
 }
 
-cmp -s AGENTS.md CLAUDE.md || fail "AGENTS.md and CLAUDE.md must be byte-identical"
+test -s AGENTS.md || fail "AGENTS.md must contain the canonical repository guidance"
+grep -Fq '[`AGENTS.md`](./AGENTS.md)' CLAUDE.md ||
+  fail "CLAUDE.md must point to the canonical AGENTS.md"
+grep -Fq '[`../AGENTS.md`](../AGENTS.md)' CLAUDE.md ||
+  fail "CLAUDE.md must point to the workspace AGENTS.md"
 
-git check-ignore -q docs/superpowers/ ||
+git check-ignore -q docs/superpowers/policy-probe.md ||
   fail "docs/superpowers/ must be ignored"
 
 if git ls-files -- docs/superpowers/ | grep -q .; then

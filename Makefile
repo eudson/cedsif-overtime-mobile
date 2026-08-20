@@ -1,4 +1,4 @@
-.PHONY: setup get build-runner build-runner-watch format analyze test ci-check run-dev run-prod build-android build-ios icons doctor
+.PHONY: setup get build-runner build-runner-watch format analyze test policy-check ci-check run-dev run-prod build-android build-ios icons doctor
 
 setup:
 	flutter pub get
@@ -22,7 +22,10 @@ analyze:
 test:
 	flutter test
 
-ci-check: format analyze test
+policy-check:
+	tool/policy_check.sh
+
+ci-check: policy-check format analyze test
 
 run-dev:
 	flutter run --dart-define-from-file=.env.dev

@@ -71,7 +71,9 @@ make icons
 make doctor
 ```
 
-`make ci-check` is the required local quality gate: formatting, static analysis, and tests. `make icons` regenerates Android and iOS launcher icons from `assets/launcher_icon.png`.
+`make ci-check` is the required local quality gate: repository policy,
+formatting, static analysis, and tests. `make icons` regenerates Android and iOS
+launcher icons from `assets/launcher_icon.png`.
 
 ## Build-time environment
 
@@ -147,4 +149,6 @@ Run the policy guard directly when changing project conventions:
 tool/policy_check.sh
 ```
 
-The guard verifies instruction-file identity, ignored local planning artifacts, generated-file policy, domain purity, import conventions, prohibited APIs/packages, and commit attribution rules.
+The guard verifies the canonical instruction file and its compatibility pointer,
+ignored local planning artifacts, generated-file policy, domain purity, import
+conventions, prohibited APIs/packages, and commit attribution rules.
