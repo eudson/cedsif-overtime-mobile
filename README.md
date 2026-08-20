@@ -70,6 +70,20 @@ cleartext traffic is enabled only in the debug manifest; release builds retain
 the platform's secure networking defaults. Use the development machine's LAN
 address instead when testing on a physical device.
 
+List the emulators and physical devices available to Flutter, then launch the
+app on the selected target:
+
+```sh
+flutter devices
+flutter run -d emulator-5554 --dart-define-from-file=.env.local
+```
+
+`emulator-5554` is an example device ID. Replace it with the ID of any other
+running emulator or physical device connected to the development machine with
+developer mode and USB debugging enabled. When using a physical device, ensure
+that `.env.local` uses the development machine's reachable LAN address rather
+than the emulator-only `10.0.2.2` alias.
+
 Additional workflow targets:
 
 ```sh
